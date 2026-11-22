@@ -94,11 +94,11 @@ function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
   if (lastRow >= 2) {
     const existing = sh.getRange(2, 2, lastRow - 1, 2).getValues(); // B=date, C=code
     for (let i = 0; i < existing.length; i++) {
-      if (existing[i][0] !== "" || String(existing[i][1] || "").trim() !== "") {
-        lastDataRow = i + 2;
-      }
       const d = formatDate_(existing[i][0], tz);
       const c = String(existing[i][1] || "").trim();
+      if (d && c) {
+        lastDataRow = i + 2;
+      }
       if (d === dateStr && c === code) {
         const targetRow = i + 2;
         sh.getRange(targetRow, startCol, 1, numCols).setValues([rowValues]);
@@ -114,13 +114,16 @@ function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
 function readChamberLogs_(sh, tz) {
   if (!sh || sh.getLastRow() < 2) return [];
   const vals = sh.getRange(2, 2, sh.getLastRow() - 1, 9).getValues(); // B..J
-  const out = [];
+  const map = {};
+  const keys = [];
   for (let i = 0; i < vals.length; i++) {
     const r = vals[i];
     const dateStr = formatDate_(r[0], tz);
     const code = String(r[1] || "").trim();
     if (!dateStr || !code) continue;
-    out.push({
+    const k = dateStr + "|" + code;
+    if (!map[k]) keys.push(k);
+    map[k] = {
       date: dateStr,
       code: code,
       u1: Number(r[2] || 0),
@@ -130,21 +133,24 @@ function readChamberLogs_(sh, tz) {
       fl: Number(r[6] || 0),
       temp: r[7] !== "" && r[7] !== null ? Number(r[7]) : null,
       note: String(r[8] || "")
-    });
+    };
   }
-  return out;
+  return keys.map(k => map[k]);
 }
 
 function readReeferLogs_(sh, tz) {
   if (!sh || sh.getLastRow() < 2) return [];
   const vals = sh.getRange(2, 2, sh.getLastRow() - 1, 8).getValues(); // B..I
-  const out = [];
+  const map = {};
+  const keys = [];
   for (let i = 0; i < vals.length; i++) {
     const r = vals[i];
     const dateStr = formatDate_(r[0], tz);
     const code = String(r[1] || "").trim();
     if (!dateStr || !code) continue;
-    out.push({
+    const k = dateStr + "|" + code;
+    if (!map[k]) keys.push(k);
+    map[k] = {
       date: dateStr,
       code: code,
       u1: Number(r[2] || 0),
@@ -153,9 +159,9 @@ function readReeferLogs_(sh, tz) {
       u4: Number(r[5] || 0),
       temp: r[6] !== "" && r[6] !== null ? Number(r[6]) : null,
       note: String(r[7] || "")
-    });
+    };
   }
-  return out;
+  return keys.map(k => map[k]);
 }
 
 function readMaster_(sh) {
