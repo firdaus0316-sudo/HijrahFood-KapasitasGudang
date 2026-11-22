@@ -32,7 +32,7 @@ function doGet(e) {
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
+  lock.waitLock(15000);
   try {
     const payload = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -61,6 +61,7 @@ function doPost(e) {
           payload.note || ""
         ];
         const res = upsertRow_(sh, tz, dateStr, code, 2, 9, rowValues); // Cols B..J (startCol 2, 9 cols)
+        SpreadsheetApp.flush();
         return jsonOutput_({ ok: true, mode: res.mode, row: res.row });
       } else if (type === "REEFER") {
         const sh = ss.getSheetByName(SHEET_REEFER);
@@ -75,6 +76,7 @@ function doPost(e) {
           payload.note || ""
         ];
         const res = upsertRow_(sh, tz, dateStr, code, 2, 8, rowValues); // Cols B..I (startCol 2, 8 cols)
+        SpreadsheetApp.flush();
         return jsonOutput_({ ok: true, mode: res.mode, row: res.row });
       }
     }
@@ -88,9 +90,13 @@ function doPost(e) {
 
 function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
   const lastRow = sh.getLastRow();
+  let lastDataRow = 1;
   if (lastRow >= 2) {
     const existing = sh.getRange(2, 2, lastRow - 1, 2).getValues(); // B=date, C=code
     for (let i = 0; i < existing.length; i++) {
+      if (existing[i][0] !== "" || String(existing[i][1] || "").trim() !== "") {
+        lastDataRow = i + 2;
+      }
       const d = formatDate_(existing[i][0], tz);
       const c = String(existing[i][1] || "").trim();
       if (d === dateStr && c === code) {
@@ -100,7 +106,7 @@ function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
       }
     }
   }
-  const newRow = Math.max(2, lastRow + 1);
+  const newRow = Math.max(2, lastDataRow + 1);
   sh.getRange(newRow, startCol, 1, numCols).setValues([rowValues]);
   return { mode: "inserted", row: newRow };
 }
