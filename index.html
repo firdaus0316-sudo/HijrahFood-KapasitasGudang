@@ -624,6 +624,9 @@
                   <div id="prev-ext-box" class="py-2 flex justify-between"><span class="text-slate-500">Extended %</span><span id="prev-ext" class="font-bold text-slate-900 tabular-nums">-</span></div>
                   <div class="py-2 flex justify-between items-center"><span class="text-slate-500">Status Kapasitas</span><span id="prev-status">-</span></div>
                 </div>
+                <div id="prev-overcap-warn" class="hidden p-2.5 rounded-md bg-amber-50 border border-amber-300 text-[11px] font-bold text-amber-800">
+                  Perhatian: Angka pemakaian melebihi kapasitas standar. Pastikan tidak salah ketik.
+                </div>
               </div>
 
               <div class="p-3 rounded-md bg-blue-50 border border-blue-100 text-xs text-blue-900">
@@ -877,6 +880,8 @@ function doGet(e) {
 }
 
 function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
   try {
     const payload = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -897,7 +902,7 @@ function doPost(e) {
       }
     }
     throw new Error("Action tidak dikenal.");
-  } catch (err) { return jsonOutput_({ ok: false, error: err.message }); }
+  } catch (err) { return jsonOutput_({ ok: false, error: err.message }); } finally { lock.releaseLock(); }
 }
 
 function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
@@ -1123,10 +1128,11 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
     }
 
     let isSyncingSheet = false;
+    let isSubmittingForm = false;
     async function syncFromGoogleSheet(manual = false) {
       const url = getGasUrl();
       if (!url) { if (manual) openSettingsModal(); return false; }
-      if (isSyncingSheet) return false;
+      if (isSyncingSheet || isSubmittingForm) return false;
       isSyncingSheet = true;
       const btn = document.getElementById("btn-sync-now");
       if (manual && btn) { btn.textContent = "Syncing..."; btn.disabled = true; }
@@ -1848,6 +1854,11 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       document.getElementById("prev-util-floor").textContent = fmtPct(flUtil);
       document.getElementById("prev-ext").textContent = fmtPct(util+flUtil);
       document.getElementById("prev-status").outerHTML = `<span id="prev-status">${getStatusBadge(status)}</span>`;
+      const warnEl = document.getElementById("prev-overcap-warn");
+      if (warnEl) {
+        const isOver = total > m.capacity * 1.25 || (m.type === "CHAMBER" && m.addFloor > 0 && fl > m.addFloor * 1.5);
+        warnEl.classList.toggle("hidden", !isOver);
+      }
     }
 
     async function handleFormSubmit(e) {
@@ -1872,6 +1883,8 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       if (gasUrl) {
         const btn = document.getElementById("btn-form-submit");
         btn.textContent = "Menyimpan..."; btn.disabled = true;
+        isSubmittingForm = true;
+        let syncedOk = false;
         try {
           const res = await fetch(gasUrl, {
             method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -1879,10 +1892,16 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
           });
           const data = await res.json();
           if (!data.ok) throw new Error(data.error || "Gagal menulis ke Google Sheets");
-          showToast(`Data ${code} (${fmtDateID(dateStr)}) tersimpan ke Google Sheets (baris ${data.row}).`);
+          syncedOk = true;
+          showToast(`Data ${code} (${fmtDateID(dateStr)}) tersimpan langsung ke Google Sheets (baris ${data.row}).`);
         } catch (err) {
           showToast("Tersimpan di lokal, gagal kirim ke Google Sheets: " + err.message, true);
-        } finally { btn.disabled = false; prefillExistingOrLatest(); }
+        } finally {
+          isSubmittingForm = false;
+          btn.disabled = false;
+          prefillExistingOrLatest();
+        }
+        if (syncedOk) syncFromGoogleSheet(false);
       } else {
         showToast(`Data ${code} (${fmtDateID(dateStr)}) disimpan secara lokal.`);
         prefillExistingOrLatest();
@@ -1979,12 +1998,18 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       renderAll();
       if (getGasUrl()) syncFromGoogleSheet(false);
 
-      // Auto-sync otomatis ke Google Sheets setiap 15 detik & saat tab kembali aktif
+      // Auto-sync otomatis ke Google Sheets setiap 10 detik, saat tab aktif, fokus, atau kembali online
       setInterval(() => {
         if (getGasUrl() && document.visibilityState === "visible") syncFromGoogleSheet(false);
-      }, 15000);
+      }, 10000);
       document.addEventListener("visibilitychange", () => {
         if (getGasUrl() && document.visibilityState === "visible") syncFromGoogleSheet(false);
+      });
+      window.addEventListener("focus", () => {
+        if (getGasUrl()) syncFromGoogleSheet(false);
+      });
+      window.addEventListener("online", () => {
+        if (getGasUrl()) syncFromGoogleSheet(false);
       });
     });
   </script>
