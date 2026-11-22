@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hijrah Food — Sistem Monitoring Kapasitas Gudang</title>
+  <link rel="icon" type="image/jpeg" href="logo-hijrahfood.jpg" />
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --bg-page: #edf1f7;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f8fafc;
+      --border: #cbd5e1;
+      --text-main: #090d16;
+      --text-muted: #475569;
+      --accent: #1d4ed8;
+    }
+    body {
+      background: radial-gradient(circle at top left, #f8fafc 0%, #e9eef5 100%);
+      color: var(--text-main);
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+    }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .card-3d {
+      background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+      border: 1px solid #cbd5e1;
+      border-bottom: 3px solid #cbd5e1;
+      box-shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+    .kpi-3d:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.12), 0 6px 12px -2px rgba(15, 23, 42, 0.06);
+    }
+    .btn-3d-primary {
+      background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      border: 1px solid #1e40af;
+      box-shadow: 0 3px 0 #1e3a8a, 0 5px 12px rgba(29, 78, 216, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-3d-primary:hover { background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); }
+    .btn-3d-primary:active { transform: translateY(2px); box-shadow: 0 1px 0 #1e3a8a, 0 2px 6px rgba(29, 78, 216, 0.2); }
+    .btn-3d-secondary {
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 2px 0 #cbd5e1, 0 2px 5px rgba(15, 23, 42, 0.05), inset 0 1px 0 #ffffff;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-3d-secondary:hover { background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%); }
+    .btn-3d-secondary:active { transform: translateY(1px); box-shadow: 0 1px 0 #cbd5e1; }
+    .track-3d {
+      background: #e2e8f0;
+      box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.14);
+    }
+    .fill-3d {
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 3px rgba(15, 23, 42, 0.2);
+    }
+    .sidebar-3d {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      box-shadow: 4px 0 24px rgba(15, 23, 42, 0.06);
+    }
+    .emblem-3d {
+      background: linear-gradient(180deg, #2563eb 0%, #1e40af 100%);
+      box-shadow: 0 3px 0 #1e3a8a, 0 4px 10px rgba(29, 78, 216, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <div class="flex min-h-screen w-full">
+    <div id="sidebar-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-slate-900/40 z-30 hidden lg:hidden"></div>
+
+    <!-- ============================================================ -->
+    <!-- SIDEBAR (CLEAN ENTERPRISE WHITE)                             -->
+    <!-- ============================================================ -->
+    <aside id="app-sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-60 shrink-0 sidebar-3d border-r border-slate-300 flex flex-col justify-between transition-transform duration-200 -translate-x-full lg:translate-x-0">
+      <div class="p-4 space-y-4 overflow-y-auto">
+        <!-- Brand -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div class="flex items-center gap-2.5">
+            <div class="w-11 h-11 rounded-xl bg-white border border-slate-300 border-b-2 shadow-sm overflow-hidden shrink-0 flex items-center justify-center p-0.5">
+              <img src="logo-hijrahfood.jpg" alt="Hijrah Food" class="w-full h-full object-contain rounded-lg" />
+            </div>
+            <div class="min-w-0">
+              <div class="text-[17px] font-black text-slate-950 leading-none tracking-tight whitespace-nowrap">HIJRAH FOOD</div>
+              <div class="mt-1 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">Warehouse System</div>
+            </div>
+          </div>
+          <button onclick="toggleMobileSidebar(false)" class="lg:hidden p-1 text-slate-700 hover:text-slate-950">&times;</button>
+        </div>
+
+        <!-- Nav -->
+        <nav class="space-y-1">
+          <div class="px-2.5 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Navigasi</div>
+
+          <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold btn-3d-primary">
+            <span class="flex items-center gap-2.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+              Ringkasan &amp; KPI
+            </span>
+          </button>
+
+          <button onclick="switchTab('form')" id="nav-form" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-900 hover:bg-slate-100 transition">
+            <span class="flex items-center gap-2.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              Input Data Harian
+            </span>
+          </button>
+
+          <div id="sidebar-admin-nav" class="space-y-1">
+            <div class="pt-2.5 px-2.5 pb-0.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Database Log</div>
+
+            <button onclick="switchTab('db-chamber')" id="nav-db-chamber" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-900 hover:bg-slate-100 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16M9 4v16"/></svg>
+                Data Chamber (7)
+              </span>
+              <span id="badge-chamber-count" class="text-xs font-mono font-bold text-slate-800">572</span>
+            </button>
+
+            <button onclick="switchTab('db-reefer')" id="nav-db-reefer" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-900 hover:bg-slate-100 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                Data Reefer (4)
+              </span>
+              <span id="badge-reefer-count" class="text-xs font-mono font-bold text-slate-800">148</span>
+            </button>
+
+            <div class="pt-2.5 px-2.5 pb-0.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Konfigurasi</div>
+
+            <button onclick="switchTab('master')" id="nav-master" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-900 hover:bg-slate-100 transition">
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Master Gudang
+              </span>
+            </button>
+          </div>
+        </nav>
+
+        <!-- Clean Warehouse Health Summary in Sidebar -->
+        <div class="pt-3.5 border-t border-slate-200 space-y-2">
+          <div class="px-1 text-[11px] font-extrabold uppercase tracking-wider text-slate-700">Ringkasan Status</div>
+          <div class="p-2.5 rounded-xl card-3d space-y-1 text-xs">
+            <button type="button" onclick="showStatusBreakdown('Aman')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-emerald-50/70 transition text-left">
+              <span class="flex items-center gap-2 font-bold text-slate-900"><span class="w-2 h-2 rounded-full bg-emerald-600"></span>Aman (&lt;80%)</span>
+              <span id="sb-cnt-aman" class="font-extrabold text-emerald-700 tabular-nums">-</span>
+            </button>
+            <button type="button" onclick="showStatusBreakdown('Warning')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-amber-50/70 transition text-left">
+              <span class="flex items-center gap-2 font-bold text-slate-900"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Warning (80-89%)</span>
+              <span id="sb-cnt-warn" class="font-extrabold text-amber-600 tabular-nums">-</span>
+            </button>
+            <button type="button" onclick="showStatusBreakdown('Kritis')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-orange-50/70 transition text-left">
+              <span class="flex items-center gap-2 font-bold text-slate-900"><span class="w-2 h-2 rounded-full bg-orange-500"></span>Kritis (90-99%)</span>
+              <span id="sb-cnt-kritis" class="font-extrabold text-orange-600 tabular-nums">-</span>
+            </button>
+            <button type="button" onclick="showStatusBreakdown('Penuh')" class="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-red-50/70 transition text-left">
+              <span class="flex items-center gap-2 font-bold text-slate-900"><span class="w-2 h-2 rounded-full bg-red-600"></span>Penuh (&ge;100%)</span>
+              <span id="sb-cnt-penuh" class="font-extrabold text-red-600 tabular-nums">-</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-3.5 border-t border-slate-200 space-y-2 bg-slate-50/70">
+        <!-- Role Indicator & Switch -->
+        <div class="flex items-center justify-between px-1">
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">Mode Akses</span>
+          <span id="role-badge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800">Umum</span>
+        </div>
+
+        <button id="btn-login-admin" onclick="openAdminLoginModal()" class="w-full py-2 rounded-lg text-xs font-bold btn-3d-secondary text-blue-700">
+          Masuk Mode Admin
+        </button>
+
+        <div id="sidebar-admin-footer" class="space-y-2 hidden">
+          <button onclick="openSettingsModal()" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold btn-3d-secondary">
+            <span class="flex items-center gap-2">
+              <span id="sidebar-conn-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span id="sidebar-conn-text">Koneksi Sheet</span>
+            </span>
+            <span class="text-slate-500 font-bold">&rsaquo;</span>
+          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportAllCSV()" class="py-1.5 rounded-lg text-xs font-bold btn-3d-secondary">Unduh CSV</button>
+            <a href="https://docs.google.com/spreadsheets/d/19VtFGdWJTiLpAtILp7zcELe6LzWgw1zUtUOzTS_zGr8/edit" target="_blank" rel="noopener noreferrer"
+              class="py-1.5 rounded-lg text-xs font-bold text-center btn-3d-secondary text-blue-700">Buka Sheet</a>
+          </div>
+          <button onclick="switchToUmum()" class="w-full py-1.5 rounded-lg text-xs font-bold btn-3d-secondary text-slate-700">
+            Kunci ke Mode Umum
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============================================================ -->
+    <!-- MAIN CONTENT AREA                                            -->
+    <!-- ============================================================ -->
+    <main class="flex-1 min-w-0">
+
+      <!-- TOP HEADER BAR -->
+      <header class="bg-white/95 backdrop-blur border-b border-slate-300 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-20 shadow-sm">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleMobileSidebar(true)" class="lg:hidden p-1.5 rounded-md border border-slate-300 text-slate-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <div>
+            <h1 id="page-title" class="text-base font-extrabold text-slate-950 tracking-tight">Ringkasan &amp; KPI Kapasitas Gudang</h1>
+            <p id="page-subtitle" class="text-xs font-medium text-slate-600">Data operasional 7 Chamber Cold Storage &amp; 4 Reefer SKBM</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="conn-status-label" class="text-xs font-semibold text-slate-600 mr-1">Sumber: Snapshot Lokal</span>
+          <div id="dash-controls" class="flex items-center gap-2">
+            <select id="dash-date-select" onchange="renderDashboard()" class="px-3 py-1.5 rounded-lg text-xs font-bold btn-3d-secondary focus:outline-none">
+              <option value="LATEST">Snapshot Terbaru</option>
+            </select>
+            <button onclick="syncFromGoogleSheet(true)" id="btn-sync-now" class="px-3 py-1.5 rounded-lg text-xs font-bold btn-3d-secondary">
+              Sync Google Sheet
+            </button>
+            <button onclick="switchTab('form')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold btn-3d-primary">
+              + Input Data
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-5 max-w-[1400px] mx-auto space-y-5">
+        <div id="global-toast" class="hidden px-4 py-2.5 rounded-md text-xs font-medium border"></div>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 1: DASHBOARD (STRUKTUR KPI + GRAFIK + TABEL RAPI)   -->
+        <!-- ======================================================== -->
+        <section id="view-dashboard" class="space-y-5">
+
+          <!-- KPI FILTER BAR -->
+          <div class="card-3d rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Tampilan KPI:</span>
+              <div class="inline-flex rounded-lg bg-slate-100 p-1 border border-slate-200 shadow-inner">
+                <button onclick="setKpiFilter('ALL')" id="kpi-btn-ALL" class="px-3 py-1 rounded-md text-xs font-bold btn-3d-primary">Keseluruhan</button>
+                <button onclick="setKpiFilter('CHAMBER')" id="kpi-btn-CHAMBER" class="px-3 py-1 rounded-md text-xs font-bold text-slate-700 hover:text-slate-950">Chamber (7)</button>
+                <button onclick="setKpiFilter('REEFER')" id="kpi-btn-REEFER" class="px-3 py-1 rounded-md text-xs font-bold text-slate-700 hover:text-slate-950">Reefer (4)</button>
+              </div>
+              <select id="kpi-filter-select" onchange="onKpiSelectChange()" class="px-3 py-1.5 rounded-lg text-xs font-bold btn-3d-secondary focus:outline-none">
+                <option value="ALL">Semua Gudang (Keseluruhan — 11 Unit)</option>
+                <option value="CHAMBER">Semua Chamber (7 Gudang)</option>
+                <option value="REEFER">Semua Reefer SKBM (4 Unit)</option>
+                <optgroup label="Pilih per Chamber">
+                  <option value="CS-2">CS-2 &mdash; GD Lama - 2</option>
+                  <option value="CS-3">CS-3 &mdash; GD Lama - 3</option>
+                  <option value="CS-4">CS-4 &mdash; GD Lama - 4</option>
+                  <option value="CS-5">CS-5 &mdash; GD Baru - 5</option>
+                  <option value="CS-6">CS-6 &mdash; GD Baru - 6</option>
+                  <option value="CS-H">CS-H &mdash; Chamber - H</option>
+                  <option value="CS-BDG">CS-BDG &mdash; GD - Bandung</option>
+                </optgroup>
+                <optgroup label="Pilih per Reefer">
+                  <option value="Refeer-1 SKBM">Refeer-1 SKBM</option>
+                  <option value="Refeer-2 SKBM">Refeer-2 SKBM</option>
+                  <option value="Refeer-3 SKBM">Refeer-3 SKBM</option>
+                  <option value="Refeer-4 SKBM">Refeer-4 SKBM</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="kpi-scope-info" class="text-xs font-semibold text-slate-600">Menampilkan ringkasan keseluruhan 11 gudang</span>
+              <button onclick="setKpiFilter('ALL')" id="kpi-reset-btn" class="hidden text-xs font-bold text-blue-700 hover:underline">Reset ke Keseluruhan</button>
+            </div>
+          </div>
+
+          <!-- ROW 1: 4 DYNAMIC EXECUTIVE KPI CARDS -->
+          <div id="kpi-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <!-- KPI 1 -->
+            <div class="card-3d kpi-3d rounded-xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span id="kpi1-title" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Utilisasi Rak Chamber</span>
+                <span id="kpi1-badge" class="text-[11px] font-bold text-blue-800 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md">7 Gudang</span>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <div id="kpi1-main" class="text-2xl font-extrabold text-slate-950 tracking-tight tabular-nums">-</div>
+                <div id="kpi1-sub" class="text-xs font-bold text-emerald-700 tabular-nums">-</div>
+              </div>
+              <div class="w-full h-2.5 track-3d rounded-full overflow-hidden p-0.5">
+                <div id="kpi1-bar" class="h-full fill-3d rounded-full bg-blue-600 transition-all" style="width:0%"></div>
+              </div>
+              <div class="flex justify-between text-xs font-semibold text-slate-600 tabular-nums pt-0.5">
+                <span id="kpi1-left">-</span>
+                <span id="kpi1-right">-</span>
+              </div>
+            </div>
+
+            <!-- KPI 2 -->
+            <div class="card-3d kpi-3d rounded-xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span id="kpi2-title" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Okupansi Floor (Lantai)</span>
+                <span id="kpi2-badge" class="text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">Overflow</span>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <div id="kpi2-main" class="text-2xl font-extrabold text-slate-950 tracking-tight tabular-nums">-</div>
+                <div id="kpi2-sub" class="text-xs font-bold text-slate-700 tabular-nums">-</div>
+              </div>
+              <div class="w-full h-2.5 track-3d rounded-full overflow-hidden p-0.5">
+                <div id="kpi2-bar" class="h-full fill-3d rounded-full bg-indigo-600 transition-all" style="width:0%"></div>
+              </div>
+              <div class="flex justify-between text-xs font-semibold text-slate-600 tabular-nums pt-0.5">
+                <span id="kpi2-left">-</span>
+                <span id="kpi2-right">-</span>
+              </div>
+            </div>
+
+            <!-- KPI 3 -->
+            <div class="card-3d kpi-3d rounded-xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span id="kpi3-title" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Utilisasi Reefer SKBM</span>
+                <span id="kpi3-badge" class="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md">4 Unit</span>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <div id="kpi3-main" class="text-2xl font-extrabold text-slate-950 tracking-tight tabular-nums">-</div>
+                <div id="kpi3-sub" class="text-xs font-bold text-emerald-700 tabular-nums">-</div>
+              </div>
+              <div class="w-full h-2.5 track-3d rounded-full overflow-hidden p-0.5">
+                <div id="kpi3-bar" class="h-full fill-3d rounded-full bg-emerald-600 transition-all" style="width:0%"></div>
+              </div>
+              <div class="flex justify-between text-xs font-semibold text-slate-600 tabular-nums pt-0.5">
+                <span id="kpi3-left">-</span>
+                <span id="kpi3-right">-</span>
+              </div>
+            </div>
+
+            <!-- KPI 4 -->
+            <div class="card-3d kpi-3d rounded-xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span id="kpi4-title" class="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Status Kesehatan Gudang</span>
+                <span id="kpi4-badge" class="text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">11 Total</span>
+              </div>
+              <div class="flex items-baseline justify-between gap-2">
+                <div id="kpi4-main" class="text-2xl font-extrabold text-slate-950 tracking-tight tabular-nums whitespace-nowrap">-</div>
+                <div id="kpi4-sub" class="text-xs font-bold text-slate-600 whitespace-nowrap">-</div>
+              </div>
+              <div id="kpi4-bar" class="w-full h-2.5 track-3d rounded-full overflow-hidden flex p-0.5 gap-0.5"></div>
+              <div id="kpi4-footer" class="flex justify-between text-xs font-semibold text-slate-700 tabular-nums pt-0.5"></div>
+            </div>
+          </div>
+
+          <!-- STATUS BREAKDOWN STRIP (MUNCUL SAAT STATUS DIKLIK) -->
+          <div id="status-breakdown-banner" class="hidden card-3d rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span id="status-breakdown-title" class="font-extrabold text-slate-900"></span>
+              <div id="status-breakdown-list" class="flex flex-wrap items-center gap-1.5"></div>
+            </div>
+            <button onclick="document.getElementById('status-breakdown-banner').classList.add('hidden')" class="text-xs font-bold text-slate-500 hover:text-slate-900">&times; Tutup</button>
+          </div>
+
+          <!-- ROW 2: CHARTS (BAR COMPARISON + DAILY TREND) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <!-- Chart 1: Bar Chart per Gudang -->
+            <div class="lg:col-span-6 card-3d rounded-xl p-4 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                <div>
+                  <h2 id="bar-chart-title" class="text-sm font-extrabold text-slate-950 tracking-tight">Perbandingan Utilisasi per Gudang (%)</h2>
+                  <p id="bar-chart-subtitle" class="text-xs font-medium text-slate-500">Urutan tingkat keterisian terhadap batas aman 80% &amp; 100%</p>
+                </div>
+                <select id="bar-group-select" onchange="renderBarChart()" class="px-2.5 py-1 rounded-lg text-xs font-bold btn-3d-secondary">
+                  <option value="ALL">Semua 11 Gudang</option>
+                  <option value="CHAMBER">7 Chamber Saja</option>
+                  <option value="REEFER">4 Reefer Saja</option>
+                  <optgroup label="Per Gudang">
+                    <option value="CS-2">CS-2 (GD Lama - 2)</option>
+                    <option value="CS-3">CS-3 (GD Lama - 3)</option>
+                    <option value="CS-4">CS-4 (GD Lama - 4)</option>
+                    <option value="CS-5">CS-5 (GD Baru - 5)</option>
+                    <option value="CS-6">CS-6 (GD Baru - 6)</option>
+                    <option value="CS-H">CS-H (Chamber - H)</option>
+                    <option value="CS-BDG">CS-BDG (GD - Bandung)</option>
+                    <option value="Refeer-1 SKBM">Refeer-1 SKBM</option>
+                    <option value="Refeer-2 SKBM">Refeer-2 SKBM</option>
+                    <option value="Refeer-3 SKBM">Refeer-3 SKBM</option>
+                    <option value="Refeer-4 SKBM">Refeer-4 SKBM</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div id="bar-chart-container" class="w-full"></div>
+            </div>
+
+            <!-- Chart 2: Daily Trend Line Chart -->
+            <div class="lg:col-span-6 card-3d rounded-xl p-4 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                <div>
+                  <h2 class="text-sm font-extrabold text-slate-950 tracking-tight">Tren Utilisasi Harian (%)</h2>
+                  <p id="trend-subtitle" class="text-xs font-medium text-slate-500">Perbandingan tren Chamber vs Reefer dari waktu ke waktu</p>
+                </div>
+                <select id="chart-target-select" onchange="renderTrendChart()" class="px-2.5 py-1 rounded-lg text-xs font-bold btn-3d-secondary">
+                  <option value="COMPARE">Chamber vs Reefer (Gabungan)</option>
+                  <option value="ALL_CHAMBER">Semua Chamber (7 Gudang)</option>
+                  <option value="ALL_REEFER">Semua Reefer (4 Unit)</option>
+                  <optgroup label="Per Gudang">
+                    <option value="CS-2">CS-2 (GD Lama - 2)</option>
+                    <option value="CS-3">CS-3 (GD Lama - 3)</option>
+                    <option value="CS-4">CS-4 (GD Lama - 4)</option>
+                    <option value="CS-5">CS-5 (GD Baru - 5)</option>
+                    <option value="CS-6">CS-6 (GD Baru - 6)</option>
+                    <option value="CS-H">CS-H (Chamber - H)</option>
+                    <option value="CS-BDG">CS-BDG (GD - Bandung)</option>
+                    <option value="Refeer-1 SKBM">Refeer-1 SKBM</option>
+                    <option value="Refeer-2 SKBM">Refeer-2 SKBM</option>
+                    <option value="Refeer-3 SKBM">Refeer-3 SKBM</option>
+                    <option value="Refeer-4 SKBM">Refeer-4 SKBM</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div id="trend-chart-container" class="w-full"></div>
+              <div class="flex flex-wrap items-center justify-between text-xs font-semibold text-slate-600 pt-1">
+                <div id="trend-legend" class="flex items-center gap-3">
+                  <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-blue-600 inline-block"></span> Chamber (%)</span>
+                  <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-emerald-600 inline-block"></span> Reefer (%)</span>
+                  <span class="inline-flex items-center gap-1.5"><span class="w-3 h-0.5 border-t-2 border-dashed border-amber-500 inline-block"></span> Batas 80%</span>
+                </div>
+                <span id="chart-stats-text" class="font-mono font-bold text-slate-700"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADMIN-ONLY DETAIL TABLES (HIDDEN IN UMUM MODE) -->
+          <div id="dash-admin-tables" class="space-y-5">
+            <!-- ROW 3: TABLE 1 - CHAMBER COLD STORAGE -->
+            <div class="card-3d rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/60">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-950 tracking-tight">1. Detail Kapasitas Chamber Cold Storage (7 Gudang)</h3>
+                <p class="text-xs font-medium text-slate-500">Satuan: Pallet &bull; Pemakaian Rak (Utama + AddOn) dipisah jelas dari Floor</p>
+              </div>
+              <span class="text-xs font-semibold text-slate-600">Klik <b>Update</b> untuk input stok gudang</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
+                    <th class="py-2.5 px-2.5">Gudang</th>
+                    <th class="py-2.5 px-2 text-center">Tanggal</th>
+                    <th class="py-2.5 px-2 text-right">Cap</th>
+                    <th class="py-2.5 px-2 text-right">Utama</th>
+                    <th class="py-2.5 px-2 text-right">AddOn</th>
+                    <th class="py-2.5 px-2 text-right">Rak</th>
+                    <th class="py-2.5 px-2 text-right">Sisa</th>
+                    <th class="py-2.5 px-2 w-28">Utilisasi Rak</th>
+                    <th class="py-2.5 px-2 text-right">Floor</th>
+                    <th class="py-2.5 px-2 text-right">Ext</th>
+                    <th class="py-2.5 px-2 text-center">Suhu</th>
+                    <th class="py-2.5 px-2 text-center">Status</th>
+                    <th class="py-2.5 px-2.5 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-chamber-tbody" class="divide-y divide-slate-100 tabular-nums"></tbody>
+                <tfoot id="dash-chamber-tfoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-900 tabular-nums"></tfoot>
+              </table>
+            </div>
+          </div>
+
+          <!-- ROW 4: TABLE 2 - REEFER SKBM -->
+          <div class="card-3d rounded-xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 bg-slate-50/60">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-950 tracking-tight">2. Detail Kapasitas Reefer SKBM (4 Unit)</h3>
+                <p class="text-xs font-medium text-slate-500">Satuan: Box (Kubikasi) &bull; Kapasitas standar @18 Pallet per unit</p>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse whitespace-nowrap">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
+                    <th class="py-2.5 px-2.5">Unit Reefer</th>
+                    <th class="py-2.5 px-2 text-center">Tanggal</th>
+                    <th class="py-2.5 px-2 text-right">Plt</th>
+                    <th class="py-2.5 px-2 text-right">Cap (Box)</th>
+                    <th class="py-2.5 px-2">Kategori Produk</th>
+                    <th class="py-2.5 px-2 text-right">Used</th>
+                    <th class="py-2.5 px-2 text-right">Sisa</th>
+                    <th class="py-2.5 px-2 w-28">Utilisasi Box</th>
+                    <th class="py-2.5 px-2 text-center">Suhu</th>
+                    <th class="py-2.5 px-2 text-center">Status</th>
+                    <th class="py-2.5 px-2.5 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-reefer-tbody" class="divide-y divide-slate-100 tabular-nums"></tbody>
+                <tfoot id="dash-reefer-tfoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-slate-900 tabular-nums"></tfoot>
+              </table>
+            </div>
+          </div>
+          </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 2: FORM INPUT HARIAN (BERSIH & ADAPTIF)             -->
+        <!-- ======================================================== -->
+        <section id="view-form" class="hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <!-- Form Card -->
+            <div class="lg:col-span-8 card-3d rounded-xl p-5 space-y-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+                <div>
+                  <h2 class="text-sm font-extrabold text-slate-950 tracking-tight">Entri Data Stok &amp; Suhu Harian</h2>
+                  <p class="text-xs font-medium text-slate-500">Hanya kolom yang berlaku untuk gudang terpilih yang ditampilkan</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button" id="form-mode-badge" onclick="focusFormEdit()" title="Klik untuk langsung mengubah angka data tanggal ini"
+                    class="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 border-b-2 hover:bg-amber-100 active:translate-y-px transition cursor-pointer">
+                    Edit Data Tanggal Ini
+                  </button>
+                  <button type="button" onclick="clearFormToZero()" title="Kosongkan angka input di formulir"
+                    class="text-xs font-bold px-2.5 py-1.5 rounded-lg btn-3d-secondary text-slate-700">
+                    Kosongkan
+                  </button>
+                </div>
+              </div>
+
+              <form id="warehouse-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Pencatatan</label>
+                    <input type="date" id="input-date" required onchange="prefillExistingOrLatest()"
+                      class="w-full px-3 py-2 rounded-md text-xs bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Gudang</label>
+                    <select id="input-warehouse" onchange="onWarehouseChange()"
+                      class="w-full px-3 py-2 rounded-md text-xs font-semibold bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600">
+                      <optgroup label="Chamber Cold Storage (Satuan: Pallet)">
+                        <option value="CS-2">CS-2 &mdash; GD Lama - 2</option>
+                        <option value="CS-3">CS-3 &mdash; GD Lama - 3</option>
+                        <option value="CS-4">CS-4 &mdash; GD Lama - 4</option>
+                        <option value="CS-5" selected>CS-5 &mdash; GD Baru - 5 (Ada AddOn GPU, Grosir, KNZ)</option>
+                        <option value="CS-6">CS-6 &mdash; GD Baru - 6</option>
+                        <option value="CS-H">CS-H &mdash; Chamber - H (Ada Butcher RM)</option>
+                        <option value="CS-BDG">CS-BDG &mdash; GD - Bandung (Ada AddOn DC &amp; HGH)</option>
+                      </optgroup>
+                      <optgroup label="Reefer Container SKBM (Satuan: Box)">
+                        <option value="Refeer-1 SKBM">Refeer-1 SKBM (Singles)</option>
+                        <option value="Refeer-2 SKBM">Refeer-2 SKBM (Multi: HGH, HDC, RTLP, RTL)</option>
+                        <option value="Refeer-3 SKBM">Refeer-3 SKBM (Full Nugget)</option>
+                        <option value="Refeer-4 SKBM">Refeer-4 SKBM (Full Daging Box)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Specs Bar -->
+                <div class="grid grid-cols-3 gap-3 p-3 rounded-md bg-slate-50 border border-slate-200 text-xs">
+                  <div><span class="text-slate-500 block">Kapasitas Standar</span><span id="info-cap-main" class="font-bold text-slate-900 tabular-nums">-</span></div>
+                  <div><span id="info-cap-sub-label" class="text-slate-500 block">Kapasitas Floor</span><span id="info-cap-sub" class="font-bold text-slate-900 tabular-nums">-</span></div>
+                  <div><span class="text-slate-500 block">Tujuan Sheet</span><span id="info-sheet-target" class="font-bold text-blue-700">DB_Chamber</span></div>
+                </div>
+
+                <!-- Dynamic Active Inputs Only (Hidden unused fields!) -->
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold text-slate-700">Detail Pemakaian Stok</div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="dynamic-stock-inputs"></div>
+                </div>
+
+                <!-- Floor, Suhu, Keterangan -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                  <div id="floor-input-container">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">OnFloor (Pallet di Lantai)</label>
+                    <input type="number" id="input-floor" min="0" value="0" oninput="calculateLivePreview()"
+                      class="w-full px-3 py-2 rounded-md text-xs font-mono bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Suhu (°C) <span class="font-normal text-slate-400">Opsional</span></label>
+                    <input type="number" step="0.1" id="input-temp" placeholder="-18.5"
+                      class="w-full px-3 py-2 rounded-md text-xs font-mono bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Keterangan</label>
+                    <input type="text" id="input-note" placeholder="Catatan operasional"
+                      class="w-full px-3 py-2 rounded-md text-xs bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600" />
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                  <button id="btn-copy-row-gs" type="button" onclick="copyRowForGSheets()" class="px-3 py-2 rounded-lg text-xs font-bold btn-3d-secondary">
+                    Salin Baris (Paste ke Sheet)
+                  </button>
+                  <div class="flex items-center gap-2.5 ml-auto">
+                    <button type="button" onclick="cancelFormInput()" class="px-4 py-2 rounded-lg text-xs font-bold btn-3d-secondary">
+                      Batal
+                    </button>
+                    <button type="submit" id="btn-form-submit" class="px-5 py-2 rounded-lg text-xs font-bold btn-3d-primary">
+                      Simpan Data
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <!-- Live Summary Sidebar Card -->
+            <div class="lg:col-span-4 bg-white border border-slate-200 rounded-lg p-5 flex flex-col justify-between space-y-4">
+              <div class="space-y-3">
+                <div class="pb-2.5 border-b border-slate-200">
+                  <h3 class="text-sm font-bold text-slate-900">Kalkulasi Otomatis</h3>
+                  <p class="text-xs text-slate-500">Hasil perhitungan sebelum disimpan</p>
+                </div>
+
+                <div class="p-3 rounded-md bg-slate-50 border border-slate-200 space-y-1.5">
+                  <div class="flex justify-between text-xs"><span class="text-slate-600">Utilisasi</span><span id="prev-util-top" class="font-bold text-slate-900 tabular-nums">0%</span></div>
+                  <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div id="prev-util-bar" class="h-full bg-blue-600 transition-all" style="width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="divide-y divide-slate-100 text-xs">
+                  <div class="py-2 flex justify-between"><span class="text-slate-500">Total Terpakai</span><span id="prev-total-used" class="font-bold text-slate-900 tabular-nums">-</span></div>
+                  <div class="py-2 flex justify-between"><span class="text-slate-500">Sisa Kapasitas</span><span id="prev-avail" class="font-bold text-emerald-700 tabular-nums">-</span></div>
+                  <div id="prev-floor-box" class="py-2 flex justify-between"><span class="text-slate-500">Utilisasi Floor</span><span id="prev-util-floor" class="font-bold text-slate-900 tabular-nums">-</span></div>
+                  <div id="prev-ext-box" class="py-2 flex justify-between"><span class="text-slate-500">Extended %</span><span id="prev-ext" class="font-bold text-slate-900 tabular-nums">-</span></div>
+                  <div class="py-2 flex justify-between items-center"><span class="text-slate-500">Status Kapasitas</span><span id="prev-status">-</span></div>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-md bg-blue-50 border border-blue-100 text-xs text-blue-900">
+                Data akan langsung dikirim ke Google Sheets apabila URL Apps Script sudah dihubungkan di menu <b>Koneksi Sheet</b>.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 3: DB CHAMBER                                       -->
+        <!-- ======================================================== -->
+        <section id="view-db-chamber" class="hidden space-y-4">
+          <div class="bg-white border border-slate-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Database Log Chamber (<span id="db-chamber-count">0</span> Baris)</h2>
+              <p class="text-xs text-slate-500">Sumber: tab <code>DB_Chamber</code> (7 gudang)</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="filter-chamber" onchange="renderChamberDB()" class="px-2.5 py-1.5 rounded-md text-xs bg-white border border-slate-300 text-slate-700">
+                <option value="ALL">Semua 7 Chamber</option>
+                <option value="CS-2">CS-2</option><option value="CS-3">CS-3</option><option value="CS-4">CS-4</option>
+                <option value="CS-5">CS-5</option><option value="CS-6">CS-6</option><option value="CS-H">CS-H</option><option value="CS-BDG">CS-BDG</option>
+              </select>
+              <select id="filter-chamber-month" onchange="renderChamberDB()" class="px-2.5 py-1.5 rounded-md text-xs bg-white border border-slate-300 text-slate-700">
+                <option value="ALL">Semua Bulan</option>
+                <option value="12">Desember</option><option value="11">November</option><option value="10">Oktober</option>
+                <option value="09">September</option><option value="08">Agustus</option><option value="07">Juli</option>
+              </select>
+            </div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto max-h-[560px]">
+              <table class="w-full text-xs text-left border-collapse tabular-nums whitespace-nowrap">
+                <thead class="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                  <tr>
+                    <th class="py-2.5 px-2.5 text-center">No</th><th class="py-2.5 px-2.5">Tanggal</th><th class="py-2.5 px-2.5">Gudang</th>
+                    <th class="py-2.5 px-2.5 text-right">Used</th><th class="py-2.5 px-2.5 text-right">AddOn 1</th><th class="py-2.5 px-2.5 text-right">AddOn 2</th><th class="py-2.5 px-2.5 text-right">AddOn 3</th>
+                    <th class="py-2.5 px-2.5 text-right">Floor</th><th class="py-2.5 px-2.5 text-center">Suhu</th><th class="py-2.5 px-2.5">Bulan</th>
+                    <th class="py-2.5 px-2.5 text-right">Cap</th><th class="py-2.5 px-2.5 text-right">Total Rak</th><th class="py-2.5 px-2.5 text-right">Avail</th>
+                    <th class="py-2.5 px-2.5 text-right">Util %</th><th class="py-2.5 px-2.5 text-right">Floor %</th><th class="py-2.5 px-2.5 text-right">Ext %</th>
+                    <th class="py-2.5 px-2.5 text-center">Status</th><th class="py-2.5 px-2.5 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="db-chamber-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 4: DB REEFER                                        -->
+        <!-- ======================================================== -->
+        <section id="view-db-reefer" class="hidden space-y-4">
+          <div class="bg-white border border-slate-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900">Database Log Reefer (<span id="db-reefer-count">0</span> Baris)</h2>
+              <p class="text-xs text-slate-500">Sumber: tab <code>DB_Reefer</code> (4 unit)</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="filter-reefer" onchange="renderReeferDB()" class="px-2.5 py-1.5 rounded-md text-xs bg-white border border-slate-300 text-slate-700">
+                <option value="ALL">Semua 4 Reefer</option>
+                <option value="Refeer-1 SKBM">Refeer-1 SKBM</option><option value="Refeer-2 SKBM">Refeer-2 SKBM</option>
+                <option value="Refeer-3 SKBM">Refeer-3 SKBM</option><option value="Refeer-4 SKBM">Refeer-4 SKBM</option>
+              </select>
+              <select id="filter-reefer-month" onchange="renderReeferDB()" class="px-2.5 py-1.5 rounded-md text-xs bg-white border border-slate-300 text-slate-700">
+                <option value="ALL">Semua Bulan</option>
+                <option value="12">Desember</option><option value="11">November</option><option value="10">Oktober</option><option value="09">September</option>
+              </select>
+            </div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto max-h-[560px]">
+              <table class="w-full text-xs text-left border-collapse tabular-nums whitespace-nowrap">
+                <thead class="sticky top-0 z-10 bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                  <tr>
+                    <th class="py-2.5 px-2.5 text-center">No</th><th class="py-2.5 px-2.5">Tanggal</th><th class="py-2.5 px-2.5">Reefer</th>
+                    <th class="py-2.5 px-2.5 text-right">Used 1</th><th class="py-2.5 px-2.5 text-right">Used 2</th><th class="py-2.5 px-2.5 text-right">Used 3</th><th class="py-2.5 px-2.5 text-right">Used 4</th>
+                    <th class="py-2.5 px-2.5 text-center">Suhu</th><th class="py-2.5 px-2.5">Keterangan</th><th class="py-2.5 px-2.5">Bulan</th>
+                    <th class="py-2.5 px-2.5 text-right">Cap Box</th><th class="py-2.5 px-2.5 text-right">Total Used</th><th class="py-2.5 px-2.5 text-right">Avail</th>
+                    <th class="py-2.5 px-2.5 text-right">Util %</th><th class="py-2.5 px-2.5 text-center">Status</th><th class="py-2.5 px-2.5 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="db-reefer-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- VIEW 5: MASTER GUDANG                                    -->
+        <!-- ======================================================== -->
+        <section id="view-master" class="hidden space-y-5">
+          <div class="card-3d p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-extrabold text-slate-950">Master Gudang &amp; Struktur Kolom</h2>
+                <p class="text-xs font-medium text-slate-600">Daftar kapasitas standar seluruh gudang sesuai tab <code>Master_Gudang</code></p>
+              </div>
+              <button onclick="openSettingsModal()" class="px-3.5 py-2 rounded-lg text-xs font-bold btn-3d-primary">
+                Pengaturan Sync Google Sheet
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse tabular-nums whitespace-nowrap">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wider text-slate-600 font-bold">
+                    <th class="py-2.5 px-3">Kode</th><th class="py-2.5 px-3">Nama Gudang</th><th class="py-2.5 px-3">Tipe</th>
+                    <th class="py-2.5 px-3 text-right">Kapasitas</th><th class="py-2.5 px-3 text-right">Cap. Floor</th>
+                    <th class="py-2.5 px-3">Used 1</th><th class="py-2.5 px-3">AddOn 1 / Used 2</th><th class="py-2.5 px-3">AddOn 2 / Used 3</th><th class="py-2.5 px-3">AddOn 3 / Used 4</th>
+                  </tr>
+                </thead>
+                <tbody id="master-table-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card-3d p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-extrabold text-slate-950">Pengaturan Akses Admin &amp; Mode Umum (Operator)</h2>
+                <p class="text-xs font-medium text-slate-600">Atur PIN Admin dan bagikan link khusus Mode Umum (hanya lihat KPI &amp; Input Data Harian)</p>
+              </div>
+              <button onclick="copyUmumLink()" class="px-3.5 py-2 rounded-lg text-xs font-bold btn-3d-secondary text-blue-700">
+                Salin Link Mode Umum
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
+                <label for="admin-new-pin" class="block text-xs font-bold text-slate-800">Ubah PIN Admin (Default: 1234)</label>
+                <div class="flex items-center gap-2">
+                  <input type="password" id="admin-new-pin" maxlength="12" placeholder="Masukkan PIN baru (min. 4 digit)"
+                    class="flex-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-300 text-slate-950 focus:outline-none focus:border-blue-600" />
+                  <button type="button" onclick="saveAdminPin()" class="px-3.5 py-1.5 rounded-lg text-xs font-bold btn-3d-primary">Simpan PIN</button>
+                </div>
+                <p id="admin-pin-save-msg" class="text-[11px] font-semibold text-slate-500">PIN disimpan di browser perangkat ini.</p>
+              </div>
+              <div class="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+                <p class="font-bold text-slate-800">Hak Akses per Mode:</p>
+                <p class="text-slate-600"><span class="font-bold text-slate-900">Mode Umum (Operator):</span> Hanya melihat Ringkasan KPI, Grafik, dan mengisi Form Input Data Harian.</p>
+                <p class="text-slate-600"><span class="font-bold text-blue-700">Mode Admin:</span> Akses penuh ke tabel detail gudang, Database Log, Master Gudang, Export CSV, &amp; Koneksi Sheet.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL KONEKSI GOOGLE SHEETS -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-lg max-w-xl w-full p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Koneksi Live Google Sheets (Apps Script)</h3>
+          <p class="text-xs text-slate-500">Menghubungkan aplikasi lokal langsung ke <code>DB_Chamber</code> &amp; <code>DB_Reefer</code></p>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-700 text-lg leading-none">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Web App URL Google Apps Script:</label>
+          <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+            class="w-full px-3 py-2 rounded-md font-mono bg-white border border-slate-300 text-slate-900" />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="saveAndTestGasUrl()" class="px-4 py-2 rounded-md font-semibold bg-blue-700 text-white hover:bg-blue-800">Simpan &amp; Tarik Data</button>
+          <button onclick="disconnectGasUrl()" class="px-3 py-2 rounded-md font-medium bg-white border border-slate-300 text-red-600 hover:bg-red-50">Putus Koneksi</button>
+          <span id="gas-test-status" class="font-semibold"></span>
+        </div>
+        <div class="p-3.5 rounded-md bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800">Panduan Singkat (1x Setup):</span>
+            <button onclick="copyAppsScriptCode()" class="px-2.5 py-1 rounded bg-white border border-slate-300 text-blue-700 font-semibold hover:bg-blue-50">Salin Kode Apps Script</button>
+          </div>
+          <ol class="list-decimal pl-4 space-y-1 text-slate-600">
+            <li>Di Google Sheets Anda, buka <b>Extensions &rarr; Apps Script</b>.</li>
+            <li>Tempel kode dari tombol <b>Salin Kode Apps Script</b> di atas (atau file <code>google_apps_script_Code.gs</code>), lalu Save.</li>
+            <li>Klik <b>Deploy &rarr; New deployment &rarr; Web app</b> (Execute as: <b>Me</b>, Who has access: <b>Anyone</b>).</li>
+            <li>Salin Web App URL yang muncul lalu tempel ke kolom di atas.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LOGIN ADMIN -->
+  <div id="admin-login-modal" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+    <div class="card-3d max-w-sm w-full p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div>
+          <h3 class="text-sm font-extrabold text-slate-950">Masuk Mode Admin</h3>
+          <p class="text-xs font-medium text-slate-600">Masukkan PIN Admin untuk membuka seluruh menu</p>
+        </div>
+        <button type="button" onclick="closeAdminLoginModal()" class="text-slate-400 hover:text-slate-700 text-lg leading-none font-bold">&times;</button>
+      </div>
+      <form onsubmit="submitAdminPin(event)" class="space-y-3 text-xs">
+        <div>
+          <label for="admin-pin-input" class="block font-bold text-slate-800 mb-1">PIN Admin</label>
+          <input type="password" id="admin-pin-input" placeholder="Masukkan PIN Admin..." autocomplete="off"
+            class="w-full px-3 py-2 rounded-lg font-bold bg-white border border-slate-300 text-slate-950 focus:outline-none focus:border-blue-600" />
+          <p class="text-[11px] font-medium text-slate-500 mt-1">PIN standar: <code class="font-bold text-slate-700">1234</code> (dapat diubah di menu Master Gudang).</p>
+        </div>
+        <p id="admin-pin-error" class="hidden text-xs font-bold text-red-600">PIN salah. Silakan coba lagi.</p>
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onclick="closeAdminLoginModal()" class="px-3.5 py-2 rounded-lg font-bold btn-3d-secondary">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-lg font-bold btn-3d-primary">Buka Akses Admin</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const WAREHOUSE_MASTER = {
+      "CS-2": { code: "CS-2", dashName: "GD Lama - 2", type: "CHAMBER", capacity: 42, addFloor: 20, fields: [{ key:"u1",label:"Used (Pallet)",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "CS-3": { code: "CS-3", dashName: "GD Lama - 3", type: "CHAMBER", capacity: 51, addFloor: 20, fields: [{ key:"u1",label:"Used (Pallet)",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "CS-4": { code: "CS-4", dashName: "GD Lama - 4", type: "CHAMBER", capacity: 60, addFloor: 25, fields: [{ key:"u1",label:"Used (Pallet)",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "CS-5": { code: "CS-5", dashName: "GD Baru - 5", type: "CHAMBER", capacity: 743, addFloor: 50, fields: [{ key:"u1",label:"Used Utama (Pallet)",active:true },{ key:"u2",label:"AddOn DC - GPU",active:true },{ key:"u3",label:"AddOn DC - Grosir (HDC)",active:true },{ key:"u4",label:"AddOn - KNZ",active:true }] },
+      "CS-6": { code: "CS-6", dashName: "GD Baru - 6", type: "CHAMBER", capacity: 1310, addFloor: 100, fields: [{ key:"u1",label:"Used (Pallet)",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "CS-H": { code: "CS-H", dashName: "Chamber - H", type: "CHAMBER", capacity: 204, addFloor: 40, fields: [{ key:"u1",label:"Used Utama (Pallet)",active:true },{ key:"u2",label:"AddOn Butcher RM",active:true },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "CS-BDG": { code: "CS-BDG", dashName: "GD - Bandung", type: "CHAMBER", capacity: 244, addFloor: 25, fields: [{ key:"u1",label:"Used Utama (Pallet)",active:true },{ key:"u2",label:"AddOn DC",active:true },{ key:"u3",label:"AddOn HGH",active:true },{ key:"u4",label:"",active:false }] },
+      "Refeer-1 SKBM": { code: "Refeer-1 SKBM", dashName: "Refeer-1 SKBM", type: "REEFER", capacity: 1000, palletCap: 18, defaultNote: "Singles", fields: [{ key:"u1",label:"Used (Box) - Singles",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "Refeer-2 SKBM": { code: "Refeer-2 SKBM", dashName: "Refeer-2 SKBM", type: "REEFER", capacity: 700, palletCap: 18, defaultNote: "Multi (HGH, HDC, RTLP, RTL)", fields: [{ key:"u1",label:"Used (Box) HGH",active:true },{ key:"u2",label:"Used (Box) HDC",active:true },{ key:"u3",label:"Used (Box) RTLP (Kentang)",active:true },{ key:"u4",label:"Used (Box) RTL",active:true }] },
+      "Refeer-3 SKBM": { code: "Refeer-3 SKBM", dashName: "Refeer-3 SKBM", type: "REEFER", capacity: 700, palletCap: 18, defaultNote: "Full Nugget", fields: [{ key:"u1",label:"Used (Box) - Full Nugget",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] },
+      "Refeer-4 SKBM": { code: "Refeer-4 SKBM", dashName: "Refeer-4 SKBM", type: "REEFER", capacity: 600, palletCap: 18, defaultNote: "Full Daging Box", fields: [{ key:"u1",label:"Used (Box) - Full Daging Box",active:true },{ key:"u2",label:"",active:false },{ key:"u3",label:"",active:false },{ key:"u4",label:"",active:false }] }
+    };
+
+    const CHAMBER_CODES = ["CS-2", "CS-3", "CS-4", "CS-5", "CS-6", "CS-H", "CS-BDG"];
+    const REEFER_CODES  = ["Refeer-1 SKBM", "Refeer-2 SKBM", "Refeer-3 SKBM", "Refeer-4 SKBM"];
+    const STORAGE_KEY   = "wms_hijrahfood_sheet_v1";
+    const GAS_URL_KEY   = "wms_hijrahfood_gas_url_v1";
+    const INITIAL_SHEET_DATA = {"chamberLogs":[{"date":"2026-07-16","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-07-16","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-07-16","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":18},{"date":"2026-07-16","code":"CS-5","u1":392,"u2":96,"u3":0,"u4":172,"fl":19},{"date":"2026-07-16","code":"CS-6","u1":1297,"u2":0,"u3":0,"u4":0,"fl":20},{"date":"2026-07-16","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":28},{"date":"2026-07-17","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-07-17","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":7},{"date":"2026-07-17","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-07-17","code":"CS-5","u1":392,"u2":110,"u3":0,"u4":169,"fl":19},{"date":"2026-07-17","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":30},{"date":"2026-07-17","code":"CS-BDG","u1":104,"u2":33,"u3":53,"u4":0,"fl":10},{"date":"2026-07-17","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":35},{"date":"2026-07-18","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":18},{"date":"2026-07-18","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-07-18","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-07-18","code":"CS-5","u1":379,"u2":83,"u3":0,"u4":165,"fl":19},{"date":"2026-07-18","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":87},{"date":"2026-07-18","code":"CS-BDG","u1":126,"u2":28,"u3":54,"u4":0,"fl":26},{"date":"2026-07-18","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":37},{"date":"2026-07-20","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-07-20","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-07-20","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-07-20","code":"CS-5","u1":360,"u2":101,"u3":0,"u4":160,"fl":19},{"date":"2026-07-20","code":"CS-6","u1":1287,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-07-20","code":"CS-BDG","u1":123,"u2":27,"u3":49,"u4":0,"fl":20},{"date":"2026-07-20","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-07-21","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-07-21","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-07-21","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":17},{"date":"2026-07-21","code":"CS-5","u1":377,"u2":119,"u3":0,"u4":180,"fl":19},{"date":"2026-07-21","code":"CS-6","u1":1250,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-07-21","code":"CS-BDG","u1":119,"u2":26,"u3":48,"u4":0,"fl":17},{"date":"2026-07-21","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-07-22","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-07-22","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-07-22","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":17},{"date":"2026-07-22","code":"CS-5","u1":372,"u2":106,"u3":0,"u4":180,"fl":19},{"date":"2026-07-22","code":"CS-6","u1":1237,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-07-22","code":"CS-BDG","u1":118,"u2":26,"u3":53,"u4":0,"fl":16},{"date":"2026-07-22","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":25},{"date":"2026-07-23","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":15},{"date":"2026-07-23","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-07-23","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":18},{"date":"2026-07-23","code":"CS-5","u1":384,"u2":101,"u3":0,"u4":172,"fl":19},{"date":"2026-07-23","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":24},{"date":"2026-07-23","code":"CS-BDG","u1":112,"u2":24,"u3":54,"u4":0,"fl":14},{"date":"2026-07-23","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":31},{"date":"2026-07-24","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-07-24","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-07-24","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-07-24","code":"CS-5","u1":378,"u2":121,"u3":0,"u4":151,"fl":19},{"date":"2026-07-24","code":"CS-6","u1":1301,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-24","code":"CS-BDG","u1":107,"u2":26,"u3":54,"u4":0,"fl":17},{"date":"2026-07-24","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":28},{"date":"2026-07-25","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-07-25","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-07-25","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-07-25","code":"CS-5","u1":372,"u2":128,"u3":0,"u4":150,"fl":19},{"date":"2026-07-25","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-25","code":"CS-BDG","u1":135,"u2":26,"u3":56,"u4":0,"fl":17},{"date":"2026-07-25","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":25},{"date":"2026-07-27","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-07-27","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-07-27","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-07-27","code":"CS-5","u1":392,"u2":132,"u3":0,"u4":180,"fl":19},{"date":"2026-07-27","code":"CS-6","u1":1272,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-27","code":"CS-BDG","u1":132,"u2":26,"u3":55,"u4":0,"fl":25},{"date":"2026-07-27","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-07-28","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-07-28","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-07-28","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":7},{"date":"2026-07-28","code":"CS-5","u1":392,"u2":122,"u3":0,"u4":178,"fl":19},{"date":"2026-07-28","code":"CS-6","u1":1270,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-28","code":"CS-BDG","u1":129,"u2":23,"u3":53,"u4":0,"fl":15},{"date":"2026-07-28","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":19},{"date":"2026-07-29","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":20},{"date":"2026-07-29","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-07-29","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-07-29","code":"CS-5","u1":392,"u2":123,"u3":0,"u4":177,"fl":19},{"date":"2026-07-29","code":"CS-6","u1":1240,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-29","code":"CS-BDG","u1":123,"u2":24,"u3":57,"u4":0,"fl":22},{"date":"2026-07-29","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":22},{"date":"2026-07-30","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-07-30","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-07-30","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-07-30","code":"CS-5","u1":392,"u2":130,"u3":0,"u4":180,"fl":19},{"date":"2026-07-30","code":"CS-6","u1":1232,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-30","code":"CS-BDG","u1":111,"u2":24,"u3":57,"u4":0,"fl":20},{"date":"2026-07-30","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":25},{"date":"2026-07-31","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":21},{"date":"2026-07-31","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-07-31","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-07-31","code":"CS-5","u1":392,"u2":142,"u3":0,"u4":180,"fl":19},{"date":"2026-07-31","code":"CS-6","u1":1201,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-07-31","code":"CS-BDG","u1":140,"u2":27,"u3":60,"u4":0,"fl":14},{"date":"2026-07-31","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":21},{"date":"2026-08-01","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":18},{"date":"2026-08-01","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-08-01","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":15},{"date":"2026-08-01","code":"CS-5","u1":392,"u2":145,"u3":0,"u4":180,"fl":19},{"date":"2026-08-01","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":80},{"date":"2026-08-01","code":"CS-BDG","u1":140,"u2":22,"u3":61,"u4":0,"fl":13},{"date":"2026-08-01","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":18},{"date":"2026-08-03","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-08-03","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":15},{"date":"2026-08-03","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-08-03","code":"CS-5","u1":392,"u2":150,"u3":0,"u4":176,"fl":31},{"date":"2026-08-03","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":75},{"date":"2026-08-03","code":"CS-BDG","u1":135,"u2":23,"u3":66,"u4":0,"fl":14},{"date":"2026-08-03","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":19},{"date":"2026-08-04","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-08-04","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-08-04","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-08-04","code":"CS-5","u1":392,"u2":148,"u3":0,"u4":172,"fl":19},{"date":"2026-08-04","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":84},{"date":"2026-08-04","code":"CS-BDG","u1":131,"u2":23,"u3":62,"u4":0,"fl":9},{"date":"2026-08-04","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-08-05","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-08-05","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-08-05","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-08-05","code":"CS-5","u1":392,"u2":145,"u3":0,"u4":190,"fl":23},{"date":"2026-08-05","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":105},{"date":"2026-08-05","code":"CS-BDG","u1":129,"u2":25,"u3":62,"u4":0,"fl":15},{"date":"2026-08-05","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":20},{"date":"2026-08-06","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":21},{"date":"2026-08-06","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-06","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-08-06","code":"CS-5","u1":392,"u2":140,"u3":0,"u4":190,"fl":23},{"date":"2026-08-06","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":60},{"date":"2026-08-06","code":"CS-BDG","u1":123,"u2":22,"u3":59,"u4":0,"fl":17},{"date":"2026-08-06","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":19},{"date":"2026-08-07","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":17},{"date":"2026-08-07","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-08-07","code":"CS-4","u1":59,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-07","code":"CS-5","u1":381,"u2":143,"u3":0,"u4":181,"fl":23},{"date":"2026-08-07","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":60},{"date":"2026-08-07","code":"CS-BDG","u1":111,"u2":25,"u3":59,"u4":0,"fl":18},{"date":"2026-08-07","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-08-08","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-08-08","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-08","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-08-08","code":"CS-5","u1":392,"u2":137,"u3":0,"u4":178,"fl":23},{"date":"2026-08-08","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":45},{"date":"2026-08-08","code":"CS-BDG","u1":137,"u2":20,"u3":53,"u4":0,"fl":13},{"date":"2026-08-08","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":19},{"date":"2026-08-10","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-08-10","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":22},{"date":"2026-08-10","code":"CS-4","u1":58,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-10","code":"CS-5","u1":387,"u2":140,"u3":0,"u4":175,"fl":23},{"date":"2026-08-10","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":72},{"date":"2026-08-10","code":"CS-BDG","u1":130,"u2":20,"u3":65,"u4":0,"fl":16},{"date":"2026-08-10","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-08-11","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-08-11","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":25},{"date":"2026-08-11","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-11","code":"CS-5","u1":392,"u2":140,"u3":0,"u4":172,"fl":23},{"date":"2026-08-11","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-08-11","code":"CS-BDG","u1":123,"u2":20,"u3":65,"u4":0,"fl":16},{"date":"2026-08-11","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-08-12","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-12","code":"CS-3","u1":50,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-12","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":23},{"date":"2026-08-12","code":"CS-5","u1":387,"u2":159,"u3":0,"u4":168,"fl":23},{"date":"2026-08-12","code":"CS-6","u1":1290,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-08-12","code":"CS-BDG","u1":114,"u2":21,"u3":66,"u4":0,"fl":17},{"date":"2026-08-12","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":19},{"date":"2026-08-13","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-08-13","code":"CS-3","u1":50,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-08-13","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":19},{"date":"2026-08-13","code":"CS-5","u1":392,"u2":157,"u3":0,"u4":180,"fl":40},{"date":"2026-08-13","code":"CS-6","u1":1290,"u2":0,"u3":0,"u4":0,"fl":50},{"date":"2026-08-13","code":"CS-BDG","u1":108,"u2":21,"u3":64,"u4":0,"fl":8},{"date":"2026-08-13","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":16},{"date":"2026-08-14","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":19},{"date":"2026-08-14","code":"CS-3","u1":44,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-14","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-08-14","code":"CS-5","u1":392,"u2":155,"u3":0,"u4":180,"fl":20},{"date":"2026-08-14","code":"CS-6","u1":1290,"u2":0,"u3":0,"u4":0,"fl":60},{"date":"2026-08-14","code":"CS-BDG","u1":105,"u2":26,"u3":63,"u4":0,"fl":8},{"date":"2026-08-14","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-08-15","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":15},{"date":"2026-08-15","code":"CS-3","u1":43,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-15","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-08-15","code":"CS-5","u1":392,"u2":147,"u3":0,"u4":175,"fl":23},{"date":"2026-08-15","code":"CS-6","u1":1285,"u2":0,"u3":0,"u4":0,"fl":30},{"date":"2026-08-15","code":"CS-BDG","u1":130,"u2":26,"u3":55,"u4":0,"fl":12},{"date":"2026-08-15","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":21},{"date":"2026-08-18","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-08-18","code":"CS-3","u1":42,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-18","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-08-18","code":"CS-5","u1":392,"u2":145,"u3":0,"u4":172,"fl":23},{"date":"2026-08-18","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":50},{"date":"2026-08-18","code":"CS-BDG","u1":125,"u2":25,"u3":47,"u4":0,"fl":12},{"date":"2026-08-18","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":24},{"date":"2026-08-19","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-08-19","code":"CS-3","u1":40,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-19","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-08-19","code":"CS-5","u1":392,"u2":144,"u3":0,"u4":169,"fl":19},{"date":"2026-08-19","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":60},{"date":"2026-08-19","code":"CS-BDG","u1":119,"u2":25,"u3":57,"u4":0,"fl":8},{"date":"2026-08-19","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-08-20","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-08-20","code":"CS-3","u1":35,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-20","code":"CS-4","u1":45,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-20","code":"CS-5","u1":392,"u2":112,"u3":0,"u4":162,"fl":19},{"date":"2026-08-20","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":52},{"date":"2026-08-20","code":"CS-BDG","u1":113,"u2":25,"u3":57,"u4":0,"fl":11},{"date":"2026-08-20","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":24},{"date":"2026-08-21","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-08-21","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-08-21","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-08-21","code":"CS-5","u1":392,"u2":139,"u3":0,"u4":160,"fl":20},{"date":"2026-08-21","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":61},{"date":"2026-08-21","code":"CS-BDG","u1":113,"u2":29,"u3":51,"u4":0,"fl":11},{"date":"2026-08-21","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":35},{"date":"2026-08-22","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-08-22","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-08-22","code":"CS-4","u1":56,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-22","code":"CS-5","u1":392,"u2":139,"u3":0,"u4":190,"fl":28},{"date":"2026-08-22","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":59},{"date":"2026-08-22","code":"CS-BDG","u1":116,"u2":29,"u3":66,"u4":0,"fl":12},{"date":"2026-08-22","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":41},{"date":"2026-08-24","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-24","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-08-24","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-24","code":"CS-5","u1":392,"u2":136,"u3":0,"u4":188,"fl":30},{"date":"2026-08-24","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":72},{"date":"2026-08-24","code":"CS-BDG","u1":114,"u2":28,"u3":66,"u4":0,"fl":12},{"date":"2026-08-24","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":39},{"date":"2026-08-26","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-08-26","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-08-26","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":15},{"date":"2026-08-26","code":"CS-5","u1":392,"u2":128,"u3":0,"u4":181,"fl":19},{"date":"2026-08-26","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":55},{"date":"2026-08-26","code":"CS-BDG","u1":118,"u2":28,"u3":60,"u4":0,"fl":12},{"date":"2026-08-26","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-08-27","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":13},{"date":"2026-08-27","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-08-27","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-08-27","code":"CS-5","u1":392,"u2":126,"u3":0,"u4":180,"fl":19},{"date":"2026-08-27","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":37},{"date":"2026-08-27","code":"CS-BDG","u1":95,"u2":27,"u3":67,"u4":0,"fl":12},{"date":"2026-08-27","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":29},{"date":"2026-08-28","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-08-28","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-08-28","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-08-28","code":"CS-5","u1":372,"u2":120,"u3":0,"u4":180,"fl":19},{"date":"2026-08-28","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-28","code":"CS-BDG","u1":92,"u2":26,"u3":66,"u4":0,"fl":12},{"date":"2026-08-28","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":25},{"date":"2026-08-29","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-08-29","code":"CS-3","u1":46,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-29","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-08-29","code":"CS-5","u1":372,"u2":115,"u3":0,"u4":161,"fl":19},{"date":"2026-08-29","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":59},{"date":"2026-08-29","code":"CS-BDG","u1":120,"u2":26,"u3":65,"u4":0,"fl":12},{"date":"2026-08-29","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":24},{"date":"2026-08-31","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":27},{"date":"2026-08-31","code":"CS-3","u1":41,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-08-31","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-08-31","code":"CS-5","u1":372,"u2":113,"u3":0,"u4":159,"fl":19},{"date":"2026-08-31","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":29},{"date":"2026-08-31","code":"CS-BDG","u1":115,"u2":23,"u3":61,"u4":0,"fl":12},{"date":"2026-08-31","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-09-01","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":37},{"date":"2026-09-01","code":"CS-3","u1":36,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-01","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":12},{"date":"2026-09-01","code":"CS-5","u1":340,"u2":109,"u3":49,"u4":172,"fl":19},{"date":"2026-09-01","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":52},{"date":"2026-09-01","code":"CS-6","u1":1250,"u2":0,"u3":0,"u4":0,"fl":30},{"date":"2026-09-01","code":"CS-BDG","u1":115,"u2":23,"u3":57,"u4":0,"fl":12},{"date":"2026-09-01","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-09-02","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":19},{"date":"2026-09-02","code":"CS-3","u1":33,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-02","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-09-02","code":"CS-5","u1":356,"u2":105,"u3":67,"u4":162,"fl":19},{"date":"2026-09-02","code":"CS-6","u1":1270,"u2":0,"u3":0,"u4":0,"fl":15},{"date":"2026-09-02","code":"CS-BDG","u1":110,"u2":26,"u3":69,"u4":0,"fl":11},{"date":"2026-09-02","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":20},{"date":"2026-09-03","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":26},{"date":"2026-09-03","code":"CS-3","u1":25,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-03","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-09-03","code":"CS-5","u1":321,"u2":97,"u3":94,"u4":160,"fl":19},{"date":"2026-09-03","code":"CS-6","u1":1285,"u2":0,"u3":0,"u4":0,"fl":30},{"date":"2026-09-03","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":50},{"date":"2026-09-03","code":"CS-BDG","u1":112,"u2":25,"u3":62,"u4":0,"fl":12},{"date":"2026-09-03","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":18},{"date":"2026-09-04","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-09-04","code":"CS-3","u1":15,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-04","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-09-04","code":"CS-5","u1":301,"u2":85,"u3":102,"u4":157,"fl":19},{"date":"2026-09-04","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":72},{"date":"2026-09-04","code":"CS-BDG","u1":110,"u2":25,"u3":61,"u4":0,"fl":12},{"date":"2026-09-04","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":19},{"date":"2026-09-05","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":30},{"date":"2026-09-05","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-09-05","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-05","code":"CS-5","u1":290,"u2":76,"u3":104,"u4":178,"fl":19},{"date":"2026-09-05","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":81},{"date":"2026-09-05","code":"CS-BDG","u1":108,"u2":24,"u3":61,"u4":0,"fl":12},{"date":"2026-09-05","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":16},{"date":"2026-09-07","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":19},{"date":"2026-09-07","code":"CS-3","u1":40,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-07","code":"CS-4","u1":59,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-07","code":"CS-5","u1":231,"u2":73,"u3":103,"u4":176,"fl":19},{"date":"2026-09-07","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":61},{"date":"2026-09-07","code":"CS-BDG","u1":95,"u2":24,"u3":56,"u4":0,"fl":12},{"date":"2026-09-07","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":20},{"date":"2026-09-08","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-09-08","code":"CS-3","u1":48,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-08","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-09-08","code":"CS-5","u1":210,"u2":70,"u3":119,"u4":161,"fl":19},{"date":"2026-09-08","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":21},{"date":"2026-09-08","code":"CS-BDG","u1":91,"u2":23,"u3":54,"u4":0,"fl":11},{"date":"2026-09-08","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-09-09","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-09-09","code":"CS-3","u1":46,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-09","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-09-09","code":"CS-5","u1":201,"u2":65,"u3":118,"u4":161,"fl":19},{"date":"2026-09-09","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":24},{"date":"2026-09-09","code":"CS-BDG","u1":96,"u2":23,"u3":70,"u4":0,"fl":13},{"date":"2026-09-09","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":26},{"date":"2026-09-10","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-09-10","code":"CS-3","u1":48,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-10","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-09-10","code":"CS-5","u1":201,"u2":62,"u3":124,"u4":179,"fl":19},{"date":"2026-09-10","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":25},{"date":"2026-09-10","code":"CS-BDG","u1":107,"u2":24,"u3":56,"u4":0,"fl":14},{"date":"2026-09-10","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":23},{"date":"2026-09-11","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-09-11","code":"CS-3","u1":45,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-11","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-09-11","code":"CS-5","u1":197,"u2":58,"u3":126,"u4":173,"fl":19},{"date":"2026-09-11","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":51},{"date":"2026-09-11","code":"CS-BDG","u1":103,"u2":23,"u3":60,"u4":0,"fl":19},{"date":"2026-09-11","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":25},{"date":"2026-09-12","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":7},{"date":"2026-09-12","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-09-12","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":7},{"date":"2026-09-12","code":"CS-5","u1":184,"u2":52,"u3":150,"u4":168,"fl":19},{"date":"2026-09-12","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":47},{"date":"2026-09-12","code":"CS-BDG","u1":101,"u2":24,"u3":69,"u4":0,"fl":15},{"date":"2026-09-12","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":22},{"date":"2026-09-14","code":"CS-2","u1":35,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-14","code":"CS-3","u1":18,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-14","code":"CS-4","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-14","code":"CS-5","u1":179,"u2":49,"u3":155,"u4":158,"fl":19},{"date":"2026-09-14","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":82},{"date":"2026-09-14","code":"CS-BDG","u1":92,"u2":24,"u3":66,"u4":0,"fl":13},{"date":"2026-09-14","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":20},{"date":"2026-09-15","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-09-15","code":"CS-3","u1":18,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-15","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-09-15","code":"CS-5","u1":176,"u2":47,"u3":160,"u4":158,"fl":19},{"date":"2026-09-15","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":62},{"date":"2026-09-15","code":"CS-BDG","u1":106,"u2":24,"u3":64,"u4":0,"fl":12},{"date":"2026-09-15","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":18},{"date":"2026-09-16","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-09-16","code":"CS-3","u1":47,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-16","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-16","code":"CS-5","u1":173,"u2":45,"u3":150,"u4":173,"fl":19},{"date":"2026-09-16","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-09-16","code":"CS-BDG","u1":100,"u2":23,"u3":66,"u4":0,"fl":13},{"date":"2026-09-16","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":24},{"date":"2026-09-17","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-09-17","code":"CS-3","u1":49,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-17","code":"CS-4","u1":50,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-17","code":"CS-5","u1":172,"u2":52,"u3":149,"u4":172,"fl":19},{"date":"2026-09-17","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":59},{"date":"2026-09-17","code":"CS-BDG","u1":93,"u2":23,"u3":65,"u4":0,"fl":13},{"date":"2026-09-17","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":15},{"date":"2026-09-18","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-09-18","code":"CS-3","u1":50,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-18","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":8},{"date":"2026-09-18","code":"CS-5","u1":169,"u2":45,"u3":150,"u4":169,"fl":19},{"date":"2026-09-18","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-09-18","code":"CS-BDG","u1":111,"u2":27,"u3":74,"u4":0,"fl":13},{"date":"2026-09-18","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":17},{"date":"2026-09-19","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-09-19","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-09-19","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-09-19","code":"CS-5","u1":162,"u2":43,"u3":184,"u4":168,"fl":19},{"date":"2026-09-19","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":68},{"date":"2026-09-19","code":"CS-BDG","u1":108,"u2":27,"u3":65,"u4":0,"fl":13},{"date":"2026-09-19","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":24},{"date":"2026-09-21","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-09-21","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-21","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-21","code":"CS-5","u1":160,"u2":43,"u3":190,"u4":165,"fl":19},{"date":"2026-09-21","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":59},{"date":"2026-09-21","code":"CS-BDG","u1":98,"u2":24,"u3":66,"u4":0,"fl":13},{"date":"2026-09-21","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":21},{"date":"2026-09-22","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-09-22","code":"CS-3","u1":47,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-22","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-09-22","code":"CS-5","u1":158,"u2":42,"u3":217,"u4":178,"fl":19},{"date":"2026-09-22","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":68},{"date":"2026-09-22","code":"CS-BDG","u1":104,"u2":24,"u3":66,"u4":0,"fl":13},{"date":"2026-09-22","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":30},{"date":"2026-09-23","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-09-23","code":"CS-3","u1":45,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-23","code":"CS-4","u1":59,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-23","code":"CS-5","u1":158,"u2":41,"u3":209,"u4":177,"fl":19},{"date":"2026-09-23","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":72},{"date":"2026-09-23","code":"CS-BDG","u1":100,"u2":26,"u3":73,"u4":0,"fl":13},{"date":"2026-09-23","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":35},{"date":"2026-09-24","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-09-24","code":"CS-3","u1":46,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-24","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-09-24","code":"CS-5","u1":155,"u2":36,"u3":202,"u4":167,"fl":19},{"date":"2026-09-24","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":69},{"date":"2026-09-24","code":"CS-BDG","u1":116,"u2":22,"u3":71,"u4":0,"fl":12},{"date":"2026-09-24","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":39},{"date":"2026-09-25","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-09-25","code":"CS-3","u1":46,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-25","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-09-25","code":"CS-5","u1":155,"u2":34,"u3":196,"u4":166,"fl":19},{"date":"2026-09-25","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":105},{"date":"2026-09-25","code":"CS-BDG","u1":107,"u2":24,"u3":67,"u4":0,"fl":12},{"date":"2026-09-25","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":33},{"date":"2026-09-26","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-09-26","code":"CS-3","u1":49,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-26","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-26","code":"CS-5","u1":145,"u2":29,"u3":192,"u4":165,"fl":19},{"date":"2026-09-26","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":93},{"date":"2026-09-26","code":"CS-BDG","u1":103,"u2":22,"u3":67,"u4":0,"fl":12},{"date":"2026-09-26","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-09-28","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-09-28","code":"CS-3","u1":44,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-28","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-28","code":"CS-5","u1":144,"u2":26,"u3":196,"u4":163,"fl":19},{"date":"2026-09-28","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":56},{"date":"2026-09-28","code":"CS-BDG","u1":97,"u2":22,"u3":65,"u4":0,"fl":12},{"date":"2026-09-28","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":33},{"date":"2026-09-29","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-09-29","code":"CS-3","u1":46,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-09-29","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":4},{"date":"2026-09-29","code":"CS-5","u1":140,"u2":21,"u3":191,"u4":160,"fl":19},{"date":"2026-09-29","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":48},{"date":"2026-09-29","code":"CS-BDG","u1":111,"u2":23,"u3":64,"u4":0,"fl":12},{"date":"2026-09-29","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":60},{"date":"2026-09-30","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-09-30","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":1},{"date":"2026-09-30","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-09-30","code":"CS-5","u1":140,"u2":17,"u3":196,"u4":172,"fl":19},{"date":"2026-09-30","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":59},{"date":"2026-09-30","code":"CS-BDG","u1":100,"u2":25,"u3":67,"u4":0,"fl":12},{"date":"2026-09-30","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":55},{"date":"2026-10-01","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":14},{"date":"2026-10-01","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-01","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-10-01","code":"CS-5","u1":140,"u2":13,"u3":180,"u4":170,"fl":19},{"date":"2026-10-01","code":"CS-BDG","u1":114,"u2":22,"u3":64,"u4":0,"fl":13},{"date":"2026-10-01","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":22},{"date":"2026-10-02","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-10-02","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-10-02","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":19},{"date":"2026-10-02","code":"CS-5","u1":139,"u2":13,"u3":190,"u4":168,"fl":19},{"date":"2026-10-02","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":61},{"date":"2026-10-02","code":"CS-BDG","u1":107,"u2":23,"u3":63,"u4":0,"fl":13},{"date":"2026-10-02","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":36},{"date":"2026-10-03","code":"CS-2","u1":41,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-03","code":"CS-3","u1":48,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-03","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":9},{"date":"2026-10-03","code":"CS-5","u1":136,"u2":13,"u3":187,"u4":168,"fl":19},{"date":"2026-10-03","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":47},{"date":"2026-10-03","code":"CS-BDG","u1":101,"u2":22,"u3":70,"u4":0,"fl":13},{"date":"2026-10-03","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":31},{"date":"2026-10-05","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":11},{"date":"2026-10-05","code":"CS-3","u1":50,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-05","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-10-05","code":"CS-5","u1":134,"u2":25,"u3":185,"u4":168,"fl":19},{"date":"2026-10-05","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":52},{"date":"2026-10-05","code":"CS-BDG","u1":90,"u2":21,"u3":69,"u4":0,"fl":13},{"date":"2026-10-05","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":38},{"date":"2026-10-06","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":10},{"date":"2026-10-06","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-10-06","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-10-06","code":"CS-5","u1":134,"u2":22,"u3":182,"u4":168,"fl":19},{"date":"2026-10-06","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":34},{"date":"2026-10-06","code":"CS-BDG","u1":89,"u2":21,"u3":69,"u4":0,"fl":13},{"date":"2026-10-06","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":33},{"date":"2026-10-07","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-10-07","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-10-07","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-10-07","code":"CS-5","u1":133,"u2":22,"u3":174,"u4":168,"fl":19},{"date":"2026-10-07","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":54},{"date":"2026-10-07","code":"CS-BDG","u1":83,"u2":17,"u3":77,"u4":0,"fl":12},{"date":"2026-10-07","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":28},{"date":"2026-10-08","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-10-08","code":"CS-3","u1":51,"u2":0,"u3":0,"u4":0,"fl":7},{"date":"2026-10-08","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-10-08","code":"CS-5","u1":132,"u2":21,"u3":168,"u4":165,"fl":19},{"date":"2026-10-08","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":59},{"date":"2026-10-08","code":"CS-BDG","u1":108,"u2":12,"u3":78,"u4":0,"fl":12},{"date":"2026-10-08","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-10-09","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":16},{"date":"2026-10-09","code":"CS-3","u1":40,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-09","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":6},{"date":"2026-10-09","code":"CS-5","u1":131,"u2":34,"u3":164,"u4":163,"fl":19},{"date":"2026-10-09","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":62},{"date":"2026-10-09","code":"CS-BDG","u1":76,"u2":17,"u3":68,"u4":0,"fl":12},{"date":"2026-10-09","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":31},{"date":"2026-10-10","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-10-10","code":"CS-3","u1":38,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-10","code":"CS-4","u1":60,"u2":0,"u3":0,"u4":0,"fl":2},{"date":"2026-10-10","code":"CS-5","u1":130,"u2":33,"u3":157,"u4":159,"fl":19},{"date":"2026-10-10","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":72},{"date":"2026-10-10","code":"CS-BDG","u1":101,"u2":17,"u3":71,"u4":0,"fl":12},{"date":"2026-10-10","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-10-12","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":5},{"date":"2026-10-12","code":"CS-3","u1":35,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-12","code":"CS-4","u1":57,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-12","code":"CS-5","u1":130,"u2":33,"u3":155,"u4":159,"fl":19},{"date":"2026-10-12","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":68},{"date":"2026-10-12","code":"CS-BDG","u1":86,"u2":17,"u3":78,"u4":0,"fl":12},{"date":"2026-10-12","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":25},{"date":"2026-10-13","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":3},{"date":"2026-10-13","code":"CS-3","u1":38,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-13","code":"CS-4","u1":58,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-13","code":"CS-5","u1":130,"u2":31,"u3":151,"u4":158,"fl":19},{"date":"2026-10-13","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":68},{"date":"2026-10-13","code":"CS-BDG","u1":79,"u2":17,"u3":60,"u4":0,"fl":12},{"date":"2026-10-13","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":22},{"date":"2026-10-14","code":"CS-2","u1":40,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-14","code":"CS-3","u1":37,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-14","code":"CS-4","u1":57,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-14","code":"CS-5","u1":130,"u2":29,"u3":148,"u4":167,"fl":19},{"date":"2026-10-14","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":56},{"date":"2026-10-14","code":"CS-BDG","u1":109,"u2":20,"u3":73,"u4":0,"fl":12},{"date":"2026-10-14","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":20},{"date":"2026-10-15","code":"CS-2","u1":39,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-15","code":"CS-3","u1":36,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-15","code":"CS-4","u1":56,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-15","code":"CS-5","u1":130,"u2":27,"u3":146,"u4":165,"fl":19},{"date":"2026-10-15","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":45},{"date":"2026-10-15","code":"CS-BDG","u1":102,"u2":20,"u3":72,"u4":0,"fl":12},{"date":"2026-10-15","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":28},{"date":"2026-10-16","code":"CS-2","u1":33,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-16","code":"CS-3","u1":31,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-16","code":"CS-4","u1":58,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-16","code":"CS-5","u1":130,"u2":26,"u3":158,"u4":165,"fl":19},{"date":"2026-10-16","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":87},{"date":"2026-10-16","code":"CS-BDG","u1":89,"u2":20,"u3":76,"u4":0,"fl":12},{"date":"2026-10-16","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":35},{"date":"2026-10-17","code":"CS-2","u1":37,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-17","code":"CS-3","u1":31,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-17","code":"CS-4","u1":51,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-17","code":"CS-5","u1":126,"u2":22,"u3":175,"u4":154,"fl":19},{"date":"2026-10-17","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":45},{"date":"2026-10-17","code":"CS-BDG","u1":97,"u2":19,"u3":74,"u4":0,"fl":12},{"date":"2026-10-17","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":29},{"date":"2026-10-19","code":"CS-2","u1":38,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-19","code":"CS-3","u1":37,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-19","code":"CS-4","u1":53,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-19","code":"CS-5","u1":125,"u2":22,"u3":173,"u4":154,"fl":19},{"date":"2026-10-19","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":98},{"date":"2026-10-19","code":"CS-BDG","u1":102,"u2":19,"u3":71,"u4":0,"fl":12},{"date":"2026-10-19","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":34},{"date":"2026-10-20","code":"CS-2","u1":35,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-20","code":"CS-3","u1":36,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-20","code":"CS-4","u1":50,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-20","code":"CS-5","u1":125,"u2":19,"u3":167,"u4":154,"fl":19},{"date":"2026-10-20","code":"CS-6","u1":1310,"u2":0,"u3":0,"u4":0,"fl":87},{"date":"2026-10-20","code":"CS-BDG","u1":120,"u2":19,"u3":63,"u4":0,"fl":12},{"date":"2026-10-20","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":29},{"date":"2026-10-21","code":"CS-2","u1":42,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-21","code":"CS-3","u1":41,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-21","code":"CS-4","u1":46,"u2":0,"u3":0,"u4":0,"fl":0},{"date":"2026-10-21","code":"CS-5","u1":0,"u2":17,"u3":167,"u4":0,"fl":0},{"date":"2026-10-21","code":"CS-H","u1":90,"u2":114,"u3":0,"u4":0,"fl":29}],"reeferLogs":[{"date":"2026-09-08","code":"Refeer-1 SKBM","u1":664,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-08","code":"Refeer-2 SKBM","u1":106,"u2":68,"u3":50,"u4":36,"note":""},{"date":"2026-09-08","code":"Refeer-3 SKBM","u1":500,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-08","code":"Refeer-4 SKBM","u1":496,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-09","code":"Refeer-1 SKBM","u1":887,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-09","code":"Refeer-2 SKBM","u1":106,"u2":68,"u3":50,"u4":34,"note":""},{"date":"2026-09-09","code":"Refeer-3 SKBM","u1":487,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-09","code":"Refeer-4 SKBM","u1":558,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-10","code":"Refeer-1 SKBM","u1":836,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-10","code":"Refeer-2 SKBM","u1":106,"u2":68,"u3":50,"u4":26,"note":""},{"date":"2026-09-10","code":"Refeer-3 SKBM","u1":469,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-10","code":"Refeer-4 SKBM","u1":538,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-11","code":"Refeer-1 SKBM","u1":784,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-11","code":"Refeer-2 SKBM","u1":103,"u2":68,"u3":50,"u4":26,"note":""},{"date":"2026-09-11","code":"Refeer-3 SKBM","u1":422,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-11","code":"Refeer-4 SKBM","u1":532,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-12","code":"Refeer-1 SKBM","u1":719,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-12","code":"Refeer-2 SKBM","u1":103,"u2":68,"u3":50,"u4":26,"note":""},{"date":"2026-09-12","code":"Refeer-3 SKBM","u1":369,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-12","code":"Refeer-4 SKBM","u1":503,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-14","code":"Refeer-1 SKBM","u1":690,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-14","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":50,"u4":59,"note":""},{"date":"2026-09-14","code":"Refeer-3 SKBM","u1":355,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-14","code":"Refeer-4 SKBM","u1":507,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-15","code":"Refeer-1 SKBM","u1":666,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-15","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":50,"u4":58,"note":""},{"date":"2026-09-15","code":"Refeer-3 SKBM","u1":352,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-15","code":"Refeer-4 SKBM","u1":505,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-16","code":"Refeer-1 SKBM","u1":971,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-16","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":40,"u4":52,"note":""},{"date":"2026-09-16","code":"Refeer-3 SKBM","u1":405,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-16","code":"Refeer-4 SKBM","u1":467,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-17","code":"Refeer-1 SKBM","u1":935,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-17","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":40,"u4":46,"note":""},{"date":"2026-09-17","code":"Refeer-3 SKBM","u1":390,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-17","code":"Refeer-4 SKBM","u1":462,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-18","code":"Refeer-1 SKBM","u1":905,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-18","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":35,"u4":36,"note":""},{"date":"2026-09-18","code":"Refeer-3 SKBM","u1":380,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-18","code":"Refeer-4 SKBM","u1":457,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-19","code":"Refeer-1 SKBM","u1":860,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-19","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":30,"u4":35,"note":""},{"date":"2026-09-19","code":"Refeer-3 SKBM","u1":368,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-19","code":"Refeer-4 SKBM","u1":450,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-21","code":"Refeer-1 SKBM","u1":836,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-21","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":25,"u4":21,"note":""},{"date":"2026-09-21","code":"Refeer-3 SKBM","u1":366,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-21","code":"Refeer-4 SKBM","u1":443,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-22","code":"Refeer-1 SKBM","u1":805,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-22","code":"Refeer-2 SKBM","u1":4,"u2":68,"u3":25,"u4":21,"note":""},{"date":"2026-09-22","code":"Refeer-3 SKBM","u1":346,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-22","code":"Refeer-4 SKBM","u1":415,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-23","code":"Refeer-1 SKBM","u1":1095,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-23","code":"Refeer-2 SKBM","u1":28,"u2":68,"u3":140,"u4":49,"note":"ditambah inbound"},{"date":"2026-09-23","code":"Refeer-3 SKBM","u1":505,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-23","code":"Refeer-4 SKBM","u1":527,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-24","code":"Refeer-1 SKBM","u1":1036,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-24","code":"Refeer-2 SKBM","u1":27,"u2":68,"u3":119,"u4":46,"note":""},{"date":"2026-09-24","code":"Refeer-3 SKBM","u1":415,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-24","code":"Refeer-4 SKBM","u1":514,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-25","code":"Refeer-1 SKBM","u1":1007,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-25","code":"Refeer-2 SKBM","u1":27,"u2":68,"u3":118,"u4":45,"note":""},{"date":"2026-09-25","code":"Refeer-3 SKBM","u1":407,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-25","code":"Refeer-4 SKBM","u1":507,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-26","code":"Refeer-1 SKBM","u1":975,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-26","code":"Refeer-2 SKBM","u1":27,"u2":68,"u3":117,"u4":45,"note":""},{"date":"2026-09-26","code":"Refeer-3 SKBM","u1":389,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-26","code":"Refeer-4 SKBM","u1":503,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-28","code":"Refeer-1 SKBM","u1":930,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-28","code":"Refeer-2 SKBM","u1":18,"u2":68,"u3":117,"u4":36,"note":""},{"date":"2026-09-28","code":"Refeer-3 SKBM","u1":310,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-28","code":"Refeer-4 SKBM","u1":473,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-29","code":"Refeer-1 SKBM","u1":1125,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-29","code":"Refeer-2 SKBM","u1":18,"u2":68,"u3":117,"u4":25,"note":""},{"date":"2026-09-29","code":"Refeer-3 SKBM","u1":422,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-29","code":"Refeer-4 SKBM","u1":453,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-09-30","code":"Refeer-1 SKBM","u1":1095,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-09-30","code":"Refeer-2 SKBM","u1":18,"u2":68,"u3":94,"u4":77,"note":"ditambah inbound"},{"date":"2026-09-30","code":"Refeer-3 SKBM","u1":412,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-09-30","code":"Refeer-4 SKBM","u1":574,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-01","code":"Refeer-1 SKBM","u1":1070,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-01","code":"Refeer-2 SKBM","u1":18,"u2":68,"u3":93,"u4":68,"note":""},{"date":"2026-10-01","code":"Refeer-3 SKBM","u1":412,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-01","code":"Refeer-4 SKBM","u1":569,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-02","code":"Refeer-1 SKBM","u1":1087,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-02","code":"Refeer-2 SKBM","u1":18,"u2":68,"u3":92,"u4":68,"note":""},{"date":"2026-10-02","code":"Refeer-3 SKBM","u1":350,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-02","code":"Refeer-4 SKBM","u1":562,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-03","code":"Refeer-1 SKBM","u1":1053,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-03","code":"Refeer-2 SKBM","u1":14,"u2":68,"u3":89,"u4":65,"note":""},{"date":"2026-10-03","code":"Refeer-3 SKBM","u1":330,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-03","code":"Refeer-4 SKBM","u1":560,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-05","code":"Refeer-1 SKBM","u1":1028,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-05","code":"Refeer-2 SKBM","u1":14,"u2":68,"u3":89,"u4":65,"note":""},{"date":"2026-10-05","code":"Refeer-3 SKBM","u1":304,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-05","code":"Refeer-4 SKBM","u1":553,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-06","code":"Refeer-1 SKBM","u1":880,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-06","code":"Refeer-2 SKBM","u1":14,"u2":68,"u3":71,"u4":54,"note":""},{"date":"2026-10-06","code":"Refeer-3 SKBM","u1":270,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-06","code":"Refeer-4 SKBM","u1":532,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-07","code":"Refeer-1 SKBM","u1":1030,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-07","code":"Refeer-2 SKBM","u1":14,"u2":68,"u3":88,"u4":92,"note":"ditambah inbound"},{"date":"2026-10-07","code":"Refeer-3 SKBM","u1":393,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-07","code":"Refeer-4 SKBM","u1":588,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-08","code":"Refeer-1 SKBM","u1":1018,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-08","code":"Refeer-2 SKBM","u1":11,"u2":68,"u3":88,"u4":92,"note":""},{"date":"2026-10-08","code":"Refeer-3 SKBM","u1":382,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-08","code":"Refeer-4 SKBM","u1":567,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-09","code":"Refeer-1 SKBM","u1":986,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-09","code":"Refeer-2 SKBM","u1":11,"u2":68,"u3":88,"u4":92,"note":""},{"date":"2026-10-09","code":"Refeer-3 SKBM","u1":372,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-09","code":"Refeer-4 SKBM","u1":537,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-10","code":"Refeer-1 SKBM","u1":934,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-10","code":"Refeer-2 SKBM","u1":11,"u2":68,"u3":62,"u4":90,"note":""},{"date":"2026-10-10","code":"Refeer-3 SKBM","u1":328,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-10","code":"Refeer-4 SKBM","u1":524,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-12","code":"Refeer-1 SKBM","u1":895,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-12","code":"Refeer-2 SKBM","u1":11,"u2":68,"u3":62,"u4":90,"note":""},{"date":"2026-10-12","code":"Refeer-3 SKBM","u1":327,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-12","code":"Refeer-4 SKBM","u1":503,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-13","code":"Refeer-1 SKBM","u1":850,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-13","code":"Refeer-2 SKBM","u1":9,"u2":68,"u3":62,"u4":88,"note":""},{"date":"2026-10-13","code":"Refeer-3 SKBM","u1":298,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-13","code":"Refeer-4 SKBM","u1":485,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-14","code":"Refeer-1 SKBM","u1":931,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-14","code":"Refeer-2 SKBM","u1":9,"u2":68,"u3":136,"u4":76,"note":""},{"date":"2026-10-14","code":"Refeer-3 SKBM","u1":365,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-14","code":"Refeer-4 SKBM","u1":602,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-15","code":"Refeer-1 SKBM","u1":869,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-15","code":"Refeer-2 SKBM","u1":9,"u2":68,"u3":132,"u4":70,"note":""},{"date":"2026-10-15","code":"Refeer-3 SKBM","u1":358,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-15","code":"Refeer-4 SKBM","u1":567,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-16","code":"Refeer-1 SKBM","u1":814,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-16","code":"Refeer-2 SKBM","u1":7,"u2":68,"u3":130,"u4":69,"note":""},{"date":"2026-10-16","code":"Refeer-3 SKBM","u1":333,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-16","code":"Refeer-4 SKBM","u1":559,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-17","code":"Refeer-1 SKBM","u1":786,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-17","code":"Refeer-2 SKBM","u1":6,"u2":68,"u3":130,"u4":63,"note":""},{"date":"2026-10-17","code":"Refeer-3 SKBM","u1":301,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-17","code":"Refeer-4 SKBM","u1":533,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-19","code":"Refeer-1 SKBM","u1":881,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-19","code":"Refeer-2 SKBM","u1":1,"u2":68,"u3":112,"u4":35,"note":""},{"date":"2026-10-19","code":"Refeer-3 SKBM","u1":401,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-19","code":"Refeer-4 SKBM","u1":515,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"},{"date":"2026-10-20","code":"Refeer-1 SKBM","u1":827,"u2":0,"u3":0,"u4":0,"note":"Singles"},{"date":"2026-10-20","code":"Refeer-2 SKBM","u1":1,"u2":68,"u3":112,"u4":28,"note":""},{"date":"2026-10-20","code":"Refeer-3 SKBM","u1":435,"u2":0,"u3":0,"u4":0,"note":"Full Nugget"},{"date":"2026-10-20","code":"Refeer-4 SKBM","u1":483,"u2":0,"u3":0,"u4":0,"note":"Full Daging Box"}]};
+
+    const APPS_SCRIPT_SNIPPET = `const SHEET_CHAMBER = "DB_Chamber";
+const SHEET_REEFER  = "DB_Reefer";
+const SHEET_MASTER  = "Master_Gudang";
+
+function doGet(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const tz = ss.getSpreadsheetTimeZone();
+    return jsonOutput_({
+      ok: true,
+      spreadsheetTitle: ss.getName(),
+      updatedAt: new Date().toISOString(),
+      chamberLogs: readChamberLogs_(ss.getSheetByName(SHEET_CHAMBER), tz),
+      reeferLogs: readReeferLogs_(ss.getSheetByName(SHEET_REEFER), tz),
+      master: readMaster_(ss.getSheetByName(SHEET_MASTER))
+    });
+  } catch (err) { return jsonOutput_({ ok: false, error: err.message }); }
+}
+
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const tz = ss.getSpreadsheetTimeZone();
+    if (payload.action === "upsert") {
+      const dateStr = String(payload.date || "").trim();
+      const code = String(payload.code || "").trim();
+      const p = dateStr.split("-");
+      const dateObj = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      if (payload.type === "CHAMBER") {
+        const sh = ss.getSheetByName(SHEET_CHAMBER);
+        const vals = [dateObj, code, numOrBlank_(payload.u1, true), numOrBlank_(payload.u2, false), numOrBlank_(payload.u3, false), numOrBlank_(payload.u4, false), numOrBlank_(payload.fl, true), payload.temp !== null && payload.temp !== "" && payload.temp !== undefined ? Number(payload.temp) : "", payload.note || ""];
+        return jsonOutput_(Object.assign({ ok: true }, upsertRow_(sh, tz, dateStr, code, 2, 9, vals)));
+      } else {
+        const sh = ss.getSheetByName(SHEET_REEFER);
+        const vals = [dateObj, code, numOrBlank_(payload.u1, true), numOrBlank_(payload.u2, false), numOrBlank_(payload.u3, false), numOrBlank_(payload.u4, false), payload.temp !== null && payload.temp !== "" && payload.temp !== undefined ? Number(payload.temp) : "", payload.note || ""];
+        return jsonOutput_(Object.assign({ ok: true }, upsertRow_(sh, tz, dateStr, code, 2, 8, vals)));
+      }
+    }
+    throw new Error("Action tidak dikenal.");
+  } catch (err) { return jsonOutput_({ ok: false, error: err.message }); }
+}
+
+function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
+  const lastRow = sh.getLastRow();
+  if (lastRow >= 2) {
+    const existing = sh.getRange(2, 2, lastRow - 1, 2).getValues();
+    for (let i = 0; i < existing.length; i++) {
+      if (formatDate_(existing[i][0], tz) === dateStr && String(existing[i][1] || "").trim() === code) {
+        sh.getRange(i + 2, startCol, 1, numCols).setValues([rowValues]);
+        return { mode: "updated", row: i + 2 };
+      }
+    }
+  }
+  const newRow = Math.max(2, lastRow + 1);
+  sh.getRange(newRow, startCol, 1, numCols).setValues([rowValues]);
+  return { mode: "inserted", row: newRow };
+}
+
+function readChamberLogs_(sh, tz) {
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 2, sh.getLastRow() - 1, 9).getValues().map(r => ({
+    date: formatDate_(r[0], tz), code: String(r[1] || "").trim(),
+    u1: Number(r[2] || 0), u2: Number(r[3] || 0), u3: Number(r[4] || 0), u4: Number(r[5] || 0),
+    fl: Number(r[6] || 0), temp: r[7] !== "" && r[7] !== null ? Number(r[7]) : null, note: String(r[8] || "")
+  })).filter(r => r.date && r.code);
+}
+
+function readReeferLogs_(sh, tz) {
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 2, sh.getLastRow() - 1, 8).getValues().map(r => ({
+    date: formatDate_(r[0], tz), code: String(r[1] || "").trim(),
+    u1: Number(r[2] || 0), u2: Number(r[3] || 0), u3: Number(r[4] || 0), u4: Number(r[5] || 0),
+    temp: r[6] !== "" && r[6] !== null ? Number(r[6]) : null, note: String(r[7] || "")
+  })).filter(r => r.date && r.code);
+}
+
+function readMaster_(sh) {
+  if (!sh || sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 11).getValues().filter(r => r[0]).map(r => ({
+    code: String(r[0]), dashName: String(r[1]), kategori: String(r[2]), satuan: String(r[3]),
+    capacity: Number(r[4] || 0), addFloor: Number(r[5] || 0), palletCap: Number(r[6] || 0)
+  }));
+}
+
+function formatDate_(val, tz) {
+  if (!val) return "";
+  if (Object.prototype.toString.call(val) === "[object Date]" && !isNaN(val)) return Utilities.formatDate(val, tz, "yyyy-MM-dd");
+  const s = String(val).trim(); return /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? s : "";
+}
+function numOrBlank_(v, keepZero) { const n = Number(v || 0); return (!keepZero && n === 0) ? "" : n; }
+function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }`;
+
+    let chamberLogs = [];
+    let reeferLogs  = [];
+    let currentSnapshots = [];
+    let kpiFilter = "ALL";
+    let lastDashAgg = null;
+
+    const ROLE_KEY = "wms_hijrahfood_role_v1";
+    const PIN_KEY  = "wms_hijrahfood_admin_pin_v1";
+    let currentRole = "UMUM";
+
+    function getAdminPin() { return localStorage.getItem(PIN_KEY) || "1234"; }
+
+    function initRole() {
+      const params = new URLSearchParams(window.location.search);
+      const urlGas = params.get("gas");
+      if (urlGas && urlGas.startsWith("https://")) {
+        localStorage.setItem(GAS_URL_KEY, urlGas);
+      }
+      const urlMode = (params.get("mode") || "").toLowerCase();
+      if (urlMode === "umum") {
+        currentRole = "UMUM";
+        localStorage.setItem(ROLE_KEY, "UMUM");
+      } else {
+        const savedRole = localStorage.getItem(ROLE_KEY);
+        if (savedRole === "ADMIN" || savedRole === "UMUM") {
+          currentRole = savedRole;
+        } else {
+          // Browser Admin yang sudah pernah setup GAS URL tetap Admin; perangkat baru default Mode Umum
+          currentRole = getGasUrl() ? "ADMIN" : "UMUM";
+        }
+      }
+      applyRoleUI();
+    }
+
+    function applyRoleUI() {
+      const isAdmin = currentRole === "ADMIN";
+      const adminNav = document.getElementById("sidebar-admin-nav");
+      const adminFooter = document.getElementById("sidebar-admin-footer");
+      const btnLogin = document.getElementById("btn-login-admin");
+      const dashTables = document.getElementById("dash-admin-tables");
+      const btnCopyRow = document.getElementById("btn-copy-row-gs");
+      const badge = document.getElementById("role-badge");
+
+      if (adminNav) adminNav.classList.toggle("hidden", !isAdmin);
+      if (adminFooter) adminFooter.classList.toggle("hidden", !isAdmin);
+      if (btnLogin) btnLogin.classList.toggle("hidden", isAdmin);
+      if (dashTables) dashTables.classList.toggle("hidden", !isAdmin);
+      if (btnCopyRow) btnCopyRow.classList.toggle("hidden", !isAdmin);
+
+      if (badge) {
+        if (isAdmin) {
+          badge.textContent = "Admin";
+          badge.className = "text-[11px] font-extrabold px-2.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200";
+        } else {
+          badge.textContent = "Umum (Operator)";
+          badge.className = "text-[11px] font-bold px-2.5 py-0.5 rounded bg-slate-200 text-slate-800";
+        }
+      }
+      const pinInput = document.getElementById("admin-new-pin");
+      if (pinInput && isAdmin) pinInput.value = getAdminPin();
+
+      // Jika sedang di tab Admin lalu berpindah ke Umum, kembalikan ke dashboard
+      if (!isAdmin) {
+        const activeAdminView = ["db-chamber", "db-reefer", "master"].some(t => {
+          const el = document.getElementById(`view-${t}`);
+          return el && !el.classList.contains("hidden");
+        });
+        if (activeAdminView) switchTab("dashboard");
+      }
+    }
+
+    function openAdminLoginModal() {
+      const modal = document.getElementById("admin-login-modal");
+      const inp = document.getElementById("admin-pin-input");
+      const err = document.getElementById("admin-pin-error");
+      if (err) err.classList.add("hidden");
+      if (inp) inp.value = "";
+      if (modal) {
+        modal.classList.remove("hidden");
+        setTimeout(() => inp && inp.focus(), 50);
+      }
+    }
+
+    function closeAdminLoginModal() {
+      const modal = document.getElementById("admin-login-modal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    function submitAdminPin(e) {
+      e.preventDefault();
+      const inp = document.getElementById("admin-pin-input");
+      const err = document.getElementById("admin-pin-error");
+      const val = (inp ? inp.value : "").trim();
+      if (val === getAdminPin()) {
+        currentRole = "ADMIN";
+        localStorage.setItem(ROLE_KEY, "ADMIN");
+        closeAdminLoginModal();
+        applyRoleUI();
+        if (typeof showToast === "function") showToast("Berhasil masuk Mode Admin.");
+      } else {
+        if (err) err.classList.remove("hidden");
+        if (inp) inp.select();
+      }
+    }
+
+    function switchToUmum() {
+      currentRole = "UMUM";
+      localStorage.setItem(ROLE_KEY, "UMUM");
+      applyRoleUI();
+      if (typeof showToast === "function") showToast("Tampilan dikunci ke Mode Umum (Operator).");
+    }
+
+    function saveAdminPin() {
+      const inp = document.getElementById("admin-new-pin");
+      const msg = document.getElementById("admin-pin-save-msg");
+      const newPin = (inp ? inp.value : "").trim();
+      if (newPin.length < 4) {
+        if (msg) {
+          msg.textContent = "PIN minimal 4 karakter!";
+          msg.className = "text-[11px] font-bold text-red-600";
+        }
+        return;
+      }
+      localStorage.setItem(PIN_KEY, newPin);
+      if (msg) {
+        msg.textContent = "PIN Admin baru berhasil disimpan.";
+        msg.className = "text-[11px] font-bold text-emerald-700";
+      }
+      if (typeof showToast === "function") showToast("PIN Admin diperbarui.");
+    }
+
+    function copyUmumLink() {
+      const base = window.location.href.split("?")[0];
+      const gas = getGasUrl();
+      const link = base + "?mode=umum" + (gas ? "&gas=" + encodeURIComponent(gas) : "");
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(link);
+        if (typeof showToast === "function") showToast("Link Mode Umum tersalin (otomatis terhubung ke Sheet).");
+      } else {
+        prompt("Salin link Mode Umum ini:", link);
+      }
+    }
+
+    function getGasUrl() { return localStorage.getItem(GAS_URL_KEY) || ""; }
+
+    function updateConnectionUI(label, isConnected) {
+      const lbl = document.getElementById("conn-status-label");
+      const dot = document.getElementById("sidebar-conn-dot");
+      const txt = document.getElementById("sidebar-conn-text");
+      if (isConnected) {
+        lbl.textContent = label || "Terhubung: Google Sheet Live";
+        lbl.className = "text-xs font-medium text-emerald-700 mr-1";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+        txt.textContent = "Terhubung Live";
+      } else {
+        lbl.textContent = label || "Sumber: Snapshot Lokal";
+        lbl.className = "text-xs text-slate-500 mr-1";
+        dot.className = "w-2 h-2 rounded-full bg-amber-500";
+        txt.textContent = "Koneksi Sheet";
+      }
+    }
+
+    function showToast(msg, isError = false) {
+      const el = document.getElementById("global-toast");
+      el.textContent = msg;
+      el.className = isError
+        ? "px-4 py-2.5 rounded-md text-xs font-medium border bg-red-50 text-red-700 border-red-200"
+        : "px-4 py-2.5 rounded-md text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200";
+      el.classList.remove("hidden");
+      setTimeout(() => el.classList.add("hidden"), 4000);
+    }
+
+    let isSyncingSheet = false;
+    async function syncFromGoogleSheet(manual = false) {
+      const url = getGasUrl();
+      if (!url) { if (manual) openSettingsModal(); return false; }
+      if (isSyncingSheet) return false;
+      isSyncingSheet = true;
+      const btn = document.getElementById("btn-sync-now");
+      if (manual && btn) { btn.textContent = "Syncing..."; btn.disabled = true; }
+      try {
+        const sep = url.includes("?") ? "&" : "?";
+        const res = await fetch(`${url}${sep}t=${Date.now()}`, { method: "GET", cache: "no-store" });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Gagal membaca Google Sheet");
+        if (Array.isArray(data.chamberLogs)) chamberLogs = data.chamberLogs.sort((a,b)=>a.date.localeCompare(b.date)||a.code.localeCompare(b.code));
+        if (Array.isArray(data.reeferLogs))  reeferLogs  = data.reeferLogs.sort((a,b)=>a.date.localeCompare(b.date)||a.code.localeCompare(b.code));
+        if (Array.isArray(data.master)) {
+          data.master.forEach(m => {
+            if (WAREHOUSE_MASTER[m.code]) {
+              WAREHOUSE_MASTER[m.code].capacity = m.capacity;
+              if (m.kategori==="Chamber") WAREHOUSE_MASTER[m.code].addFloor = m.addFloor;
+              if (m.kategori==="Reefer")  WAREHOUSE_MASTER[m.code].palletCap = m.palletCap;
+            }
+          });
+        }
+        saveLocal(); populateDateDropdown(); renderAll();
+        // Refresh form hanya bila form tidak sedang dibuka user agar ketikan tidak tertimpa
+        const formView = document.getElementById("view-form");
+        if (formView && formView.classList.contains("hidden")) {
+          const allLatest = Array.from(new Set([...chamberLogs.map(r=>r.date), ...reeferLogs.map(r=>r.date)])).sort();
+          if (allLatest.length) document.getElementById("input-date").value = allLatest[allLatest.length - 1];
+          prefillExistingOrLatest();
+        }
+        const nowStr = new Date().toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+        updateConnectionUI(`Live Auto-Sync (${chamberLogs.length + reeferLogs.length} baris • ${nowStr})`, true);
+        if (manual) showToast("Data berhasil disinkronkan dari Google Sheets!");
+        return true;
+      } catch (err) {
+        updateConnectionUI("Gagal Sync (Mode Lokal)", false);
+        if (manual) showToast("Gagal sync: " + err.message, true);
+        return false;
+      } finally {
+        isSyncingSheet = false;
+        if (btn) { btn.textContent = "Sync Google Sheet"; btn.disabled = false; }
+      }
+    }
+
+    function openSettingsModal() { document.getElementById("gas-url-input").value = getGasUrl(); document.getElementById("gas-test-status").textContent = ""; document.getElementById("settings-modal").classList.remove("hidden"); }
+    function closeSettingsModal() { document.getElementById("settings-modal").classList.add("hidden"); }
+
+    async function saveAndTestGasUrl() {
+      const url = document.getElementById("gas-url-input").value.trim();
+      const st = document.getElementById("gas-test-status");
+      if (!url.startsWith("https://script.google.com/")) {
+        st.textContent = "URL harus berawalan https://script.google.com/"; st.className = "font-semibold text-red-600"; return;
+      }
+      localStorage.setItem(GAS_URL_KEY, url);
+      st.textContent = "Menguji koneksi..."; st.className = "font-semibold text-amber-600";
+      const ok = await syncFromGoogleSheet(false);
+      if (ok) { st.textContent = "Berhasil terhubung!"; st.className = "font-semibold text-emerald-700"; setTimeout(() => closeSettingsModal(), 800); }
+      else { st.textContent = "Gagal. Cek Deploy -> Who has access: Anyone."; st.className = "font-semibold text-red-600"; }
+    }
+
+    function disconnectGasUrl() { localStorage.removeItem(GAS_URL_KEY); document.getElementById("gas-url-input").value=""; updateConnectionUI(null,false); closeSettingsModal(); }
+    function copyAppsScriptCode() { navigator.clipboard?.writeText(APPS_SCRIPT_SNIPPET); const st=document.getElementById("gas-test-status"); st.textContent="Kode tersalin ke clipboard!"; st.className="font-semibold text-emerald-700"; }
+
+    function initData() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) { try { const p = JSON.parse(saved); chamberLogs = p.chamberLogs||[]; reeferLogs = p.reeferLogs||[]; } catch(e) { loadFromEmbedded(); } }
+      else loadFromEmbedded();
+      populateDateDropdown();
+    }
+    function loadFromEmbedded() { chamberLogs=(INITIAL_SHEET_DATA?.chamberLogs||[]).map(r=>({...r})); reeferLogs=(INITIAL_SHEET_DATA?.reeferLogs||[]).map(r=>({...r})); }
+    function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ chamberLogs, reeferLogs })); }
+
+    const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    function getMonthName(d) { return d ? (MONTHS_ID[parseInt(d.split("-")[1], 10) - 1] || "-") : "-"; }
+    function fmtDateID(d) { if (!d) return "-"; const [y, m, day] = d.split("-"); return `${day}/${m}/${y}`; }
+    function fmtNum(n) { return Number(n || 0).toLocaleString("en-US"); }
+    function fmtPct(r) { return (Number(r || 0) * 100).toFixed(2) + "%"; }
+
+    function getStatus(u) { if (u>=1.0) return "Penuh"; if (u>=0.9) return "Kritis"; if (u>=0.8) return "Warning"; return "Aman"; }
+    function getStatusStyle(s) {
+      switch (s) {
+        case "Penuh":   return { bar:"#dc2626", badge:"bg-red-50 text-red-800 border border-red-300 border-b-2 border-b-red-400 shadow-sm" };
+        case "Kritis":  return { bar:"#ea580c", badge:"bg-orange-50 text-orange-800 border border-orange-300 border-b-2 border-b-orange-400 shadow-sm" };
+        case "Warning": return { bar:"#d97706", badge:"bg-amber-50 text-amber-800 border border-amber-300 border-b-2 border-b-amber-400 shadow-sm" };
+        default:        return { bar:"#059669", badge:"bg-emerald-50 text-emerald-800 border border-emerald-300 border-b-2 border-b-emerald-400 shadow-sm" };
+      }
+    }
+    function getStatusBadge(s) { return `<span class="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold ${getStatusStyle(s).badge}">${s}</span>`; }
+
+    function populateDateDropdown() {
+      const sel = document.getElementById("dash-date-select");
+      const cur = sel.value || "LATEST";
+      const allDates = Array.from(new Set([...chamberLogs.map(r=>r.date), ...reeferLogs.map(r=>r.date)])).sort().reverse();
+      sel.innerHTML = `<option value="LATEST">Snapshot Terbaru</option>` + allDates.map(d=>`<option value="${d}">${fmtDateID(d)} (${getMonthName(d)})</option>`).join("");
+      if (allDates.includes(cur) || cur==="LATEST") sel.value = cur;
+    }
+
+    function toggleMobileSidebar(open) {
+      const sb = document.getElementById("app-sidebar"), bd = document.getElementById("sidebar-backdrop");
+      if (open) { sb.classList.remove("-translate-x-full"); bd.classList.remove("hidden"); }
+      else { sb.classList.add("-translate-x-full"); bd.classList.add("hidden"); }
+    }
+
+    function renderDashboard() {
+      const selectedDate = document.getElementById("dash-date-select").value;
+      document.getElementById("badge-chamber-count").textContent = chamberLogs.length;
+      document.getElementById("badge-reefer-count").textContent = reeferLogs.length;
+
+      let csCap=0, csUsed=0, csAvail=0, csUtama=0, csAddOn=0, flCap=0, flUsed=0;
+      let counts = { Aman:0, Warning:0, Kritis:0, Penuh:0 };
+      currentSnapshots = [];
+
+      const csTbody = document.getElementById("dash-chamber-tbody");
+      csTbody.innerHTML = "";
+
+      CHAMBER_CODES.forEach(code => {
+        const m = WAREHOUSE_MASTER[code];
+        const logs = chamberLogs.filter(l => l.code === code);
+        const row = selectedDate==="LATEST" ? (logs[logs.length-1]||null) : (logs.find(l=>l.date===selectedDate)||null);
+        const temps = logs.filter(l=>l.temp!==undefined&&l.temp!==null&&l.temp!=="").map(l=>Number(l.temp));
+        const avgTemp = temps.length ? (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1)+"°C" : "-";
+        csCap += m.capacity; flCap += m.addFloor;
+
+        if (!row) {
+          csTbody.innerHTML += `<tr class="text-slate-400"><td class="py-2.5 px-3 font-semibold">${code} &bull; ${m.dashName}</td><td class="py-2.5 px-3 text-center">-</td><td class="py-2.5 px-3 text-right">${fmtNum(m.capacity)}</td><td colspan="9" class="py-2.5 px-3 text-center italic">Tidak ada data tanggal ${fmtDateID(selectedDate)}</td><td class="py-2.5 px-3 text-center"><button onclick="openFormForWarehouse('${code}','${selectedDate!=='LATEST'?selectedDate:''}')" class="text-blue-700 font-semibold hover:underline">Input</button></td></tr>`;
+          return;
+        }
+
+        const addOn = Number(row.u2||0)+Number(row.u3||0)+Number(row.u4||0);
+        const total = Number(row.u1||0)+addOn;
+        const avail = Math.max(0, m.capacity-total);
+        const util = m.capacity>0 ? total/m.capacity : 0;
+        const fl = Number(row.fl||0), flUtil = m.addFloor>0 ? fl/m.addFloor : 0;
+        const status = getStatus(util);
+        const barColor = getStatusStyle(status).bar;
+
+        csUtama += Number(row.u1||0); csAddOn += addOn; csUsed += total; csAvail += avail; flUsed += fl;
+        counts[status]++;
+        currentSnapshots.push({
+          code, name: m.dashName, type: "CHAMBER", date: row.date,
+          cap: m.capacity, used: total, avail, utama: Number(row.u1||0), addOn,
+          fl, flCap: m.addFloor, flUtil, utilRatio: util, util: util * 100, extRatio: util + flUtil,
+          avgTemp, status
+        });
+
+        const rowHighlight = (kpiFilter === code) ? "bg-blue-50/70" : "hover:bg-slate-50/80";
+        const shortDate = row.date ? `${row.date.split('-')[2]}/${row.date.split('-')[1]}/${row.date.split('-')[0].slice(2)}` : "-";
+        csTbody.innerHTML += `
+          <tr class="${rowHighlight}">
+            <td class="py-2 px-2.5">
+              <div class="font-semibold text-slate-900 leading-tight">${m.dashName}</div>
+              <div class="text-[11px] font-mono text-slate-400">${code}</div>
+            </td>
+            <td class="py-2 px-2 text-center text-slate-500 font-mono">${shortDate}</td>
+            <td class="py-2 px-2 text-right text-slate-700">${fmtNum(m.capacity)}</td>
+            <td class="py-2 px-2 text-right text-slate-600">${fmtNum(row.u1)}</td>
+            <td class="py-2 px-2 text-right text-slate-600">${addOn>0?fmtNum(addOn):"-"}</td>
+            <td class="py-2 px-2 text-right font-bold text-slate-900">${fmtNum(total)}</td>
+            <td class="py-2 px-2 text-right font-medium text-emerald-700">${avail>0?fmtNum(avail):"-"}</td>
+            <td class="py-2 px-2">
+              <div class="flex items-center gap-1.5">
+                <div class="w-14 h-2 track-3d rounded-full overflow-hidden shrink-0"><div style="width:${Math.min(100,util*100)}%; background:${barColor}" class="h-full fill-3d rounded-full"></div></div>
+                <span class="font-bold text-slate-900 w-11 text-right">${(util*100).toFixed(1)}%</span>
+              </div>
+            </td>
+            <td class="py-2 px-2 text-right font-semibold text-slate-700">${fl}/${m.addFloor}</td>
+            <td class="py-2 px-2 text-right font-bold text-slate-800">${((util+flUtil)*100).toFixed(1)}%</td>
+            <td class="py-2 px-2 text-center text-slate-600 font-mono font-semibold">${avgTemp}</td>
+            <td class="py-2 px-2 text-center">${getStatusBadge(status)}</td>
+            <td class="py-2 px-2.5 text-center"><button onclick="openFormForWarehouse('${code}','${row.date}')" class="px-2.5 py-1 rounded-md text-[11px] font-bold btn-3d-secondary text-blue-700">Update</button></td>
+          </tr>`;
+      });
+
+      const csUtil = csCap>0 ? csUsed/csCap : 0;
+      const flUtil = flCap>0 ? flUsed/flCap : 0;
+      document.getElementById("dash-chamber-tfoot").innerHTML = `
+        <tr>
+          <td class="py-2.5 px-2.5" colspan="2">Total Chamber (7)</td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(csCap)}</td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(csUtama)}</td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(csAddOn)}</td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(csUsed)}</td>
+          <td class="py-2.5 px-2 text-right text-emerald-700">${fmtNum(csAvail)}</td>
+          <td class="py-2.5 px-2">
+            <div class="flex items-center gap-1.5">
+              <div class="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden shrink-0"><div style="width:${Math.min(100,csUtil*100)}%" class="h-full bg-blue-700"></div></div>
+              <span class="w-11 text-right">${(csUtil*100).toFixed(1)}%</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(flUsed)}/${fmtNum(flCap)}</td>
+          <td class="py-2.5 px-2 text-right">${((csUtil+flUtil)*100).toFixed(1)}%</td>
+          <td class="py-2.5 px-2" colspan="3"></td>
+        </tr>`;
+
+      // REEFER TABLE
+      let rfCap=0, rfUsed=0, rfAvail=0, rfCapPlt=0, rfUsedPltEq=0, rfActivePltCap=0;
+      const rfTbody = document.getElementById("dash-reefer-tbody");
+      rfTbody.innerHTML = "";
+
+      REEFER_CODES.forEach(code => {
+        const m = WAREHOUSE_MASTER[code];
+        const logs = reeferLogs.filter(l => l.code === code);
+        const row = selectedDate==="LATEST" ? (logs[logs.length-1]||null) : (logs.find(l=>l.date===selectedDate)||null);
+        const temps = logs.filter(l=>l.temp!==undefined&&l.temp!==null&&l.temp!=="").map(l=>Number(l.temp));
+        const avgTemp = temps.length ? (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1)+"°C" : "-";
+        const pCap = m.palletCap || 18;
+        rfCap += m.capacity;
+        rfCapPlt += pCap;
+
+        if (!row) {
+          rfTbody.innerHTML += `<tr class="text-slate-400"><td class="py-2.5 px-3 font-semibold">${code}</td><td class="py-2.5 px-3 text-center">-</td><td class="py-2.5 px-3 text-right">${m.palletCap}</td><td class="py-2.5 px-3 text-right">${fmtNum(m.capacity)}</td><td colspan="6" class="py-2.5 px-3 text-center italic">Data Reefer mulai 08/09/2026</td><td class="py-2.5 px-3 text-center"><button onclick="openFormForWarehouse('${code}','${selectedDate!=='LATEST'?selectedDate:''}')" class="text-blue-700 font-semibold hover:underline">Input</button></td></tr>`;
+          return;
+        }
+
+        const total = Number(row.u1||0)+Number(row.u2||0)+Number(row.u3||0)+Number(row.u4||0);
+        const avail = Math.max(0, m.capacity-total);
+        const util = m.capacity>0 ? total/m.capacity : 0;
+        const status = getStatus(util);
+        const barColor = getStatusStyle(status).bar;
+        const detail = code === "Refeer-2 SKBM" ? `HGH ${row.u1} | HDC ${row.u2} | RTLP ${row.u3} | RTL ${row.u4}` : (row.note || m.defaultNote);
+
+        rfUsed += total; rfAvail += avail;
+        rfUsedPltEq += util * pCap;
+        rfActivePltCap += pCap;
+        counts[status]++;
+        currentSnapshots.push({
+          code, name: code.replace(" SKBM",""), fullName: code, type: "REEFER", date: row.date,
+          cap: m.capacity, used: total, avail, palletCap: m.palletCap, detail,
+          utilRatio: util, util: util * 100, avgTemp, status
+        });
+
+        const rowHighlight = (kpiFilter === code) ? "bg-blue-50/70" : "hover:bg-slate-50/80";
+        const shortDate = row.date ? `${row.date.split('-')[2]}/${row.date.split('-')[1]}/${row.date.split('-')[0].slice(2)}` : "-";
+        rfTbody.innerHTML += `
+          <tr class="${rowHighlight}">
+            <td class="py-2 px-2.5 font-semibold text-slate-900">${code}</td>
+            <td class="py-2 px-2 text-center text-slate-500 font-mono">${shortDate}</td>
+            <td class="py-2 px-2 text-right text-slate-600">${m.palletCap}</td>
+            <td class="py-2 px-2 text-right text-slate-700">${fmtNum(m.capacity)}</td>
+            <td class="py-2 px-2 text-slate-600 max-w-[175px] truncate" title="${detail}">${detail}</td>
+            <td class="py-2 px-2 text-right font-bold text-slate-900">${fmtNum(total)}</td>
+            <td class="py-2 px-2 text-right font-medium text-emerald-700">${avail>0?fmtNum(avail):"-"}</td>
+            <td class="py-2 px-2">
+              <div class="flex items-center gap-1.5">
+                <div class="w-14 h-2 track-3d rounded-full overflow-hidden shrink-0"><div style="width:${Math.min(100,util*100)}%; background:${barColor}" class="h-full fill-3d rounded-full"></div></div>
+                <span class="font-bold text-slate-900 w-11 text-right">${(util*100).toFixed(1)}%</span>
+              </div>
+            </td>
+            <td class="py-2 px-2 text-center text-slate-600 font-mono font-semibold">${avgTemp}</td>
+            <td class="py-2 px-2 text-center">${getStatusBadge(status)}</td>
+            <td class="py-2 px-2.5 text-center"><button onclick="openFormForWarehouse('${code}','${row.date}')" class="px-2.5 py-1 rounded-md text-[11px] font-bold btn-3d-secondary text-blue-700">Update</button></td>
+          </tr>`;
+      });
+
+      const rfUtil = rfCap>0 ? rfUsed/rfCap : 0;
+      document.getElementById("dash-reefer-tfoot").innerHTML = `
+        <tr>
+          <td class="py-2.5 px-2.5" colspan="2">Total Reefer (4)</td>
+          <td class="py-2.5 px-2 text-right">72</td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(rfCap)}</td>
+          <td class="py-2.5 px-2"></td>
+          <td class="py-2.5 px-2 text-right">${fmtNum(rfUsed)}</td>
+          <td class="py-2.5 px-2 text-right text-emerald-700">${fmtNum(rfAvail)}</td>
+          <td class="py-2.5 px-2">
+            <div class="flex items-center gap-1.5">
+              <div class="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden shrink-0"><div style="width:${Math.min(100,rfUtil*100)}%" class="h-full bg-emerald-600"></div></div>
+              <span class="w-11 text-right">${(rfUtil*100).toFixed(1)}%</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-2" colspan="3"></td>
+        </tr>`;
+
+      // Sidebar overall health counts always show total across 11 warehouses
+      document.getElementById("sb-cnt-aman").textContent = counts.Aman;
+      document.getElementById("sb-cnt-warn").textContent = counts.Warning;
+      document.getElementById("sb-cnt-kritis").textContent = counts.Kritis;
+      document.getElementById("sb-cnt-penuh").textContent = counts.Penuh;
+
+      const totalCapPlt = csCap + rfActivePltCap;
+      const totalUsedPlt = csUsed + rfUsedPltEq;
+      const totalAvailPlt = Math.max(0, totalCapPlt - totalUsedPlt);
+      const totalUtilAll = totalCapPlt > 0 ? totalUsedPlt / totalCapPlt : 0;
+
+      lastDashAgg = { csCap, csUsed, csAvail, csUtama, csAddOn, csUtil, flCap, flUsed, flUtil, rfCap, rfUsed, rfAvail, rfUtil, rfCapPlt, rfActivePltCap, rfUsedPltEq, totalCapPlt, totalUsedPlt, totalAvailPlt, totalUtilAll, counts };
+      renderKPIs();
+      renderBarChart();
+      renderTrendChart();
+    }
+
+    function setKpiFilter(val) {
+      kpiFilter = val;
+      document.getElementById("kpi-filter-select").value = val;
+      const trendSel = document.getElementById("chart-target-select");
+      const barSel = document.getElementById("bar-group-select");
+      if (val === "ALL") {
+        trendSel.value = "COMPARE";
+        barSel.value = "ALL";
+      } else if (val === "CHAMBER") {
+        trendSel.value = "ALL_CHAMBER";
+        barSel.value = "CHAMBER";
+      } else if (val === "REEFER") {
+        trendSel.value = "ALL_REEFER";
+        barSel.value = "REEFER";
+      } else {
+        trendSel.value = val;
+        barSel.value = val;
+      }
+      renderDashboard();
+    }
+
+    function onKpiSelectChange() {
+      const val = document.getElementById("kpi-filter-select").value;
+      setKpiFilter(val);
+    }
+
+    function setCard(num, title, badge, badgeCls, main, sub, subCls, barPct, barColor, leftTxt, rightTxt) {
+      document.getElementById(`kpi${num}-title`).textContent = title;
+      const bEl = document.getElementById(`kpi${num}-badge`);
+      bEl.textContent = badge;
+      bEl.className = `text-xs font-medium px-2 py-0.5 rounded ${badgeCls}`;
+      document.getElementById(`kpi${num}-main`).textContent = main;
+      const sEl = document.getElementById(`kpi${num}-sub`);
+      sEl.textContent = sub;
+      sEl.className = `text-xs font-medium tabular-nums ${subCls}`;
+      const barEl = document.getElementById(`kpi${num}-bar`);
+      barEl.style.width = `${Math.min(100, Math.max(0, barPct))}%`;
+      barEl.style.backgroundColor = barColor;
+      document.getElementById(`kpi${num}-left`).innerHTML = leftTxt;
+      document.getElementById(`kpi${num}-right`).innerHTML = rightTxt;
+    }
+
+    function showStatusBreakdown(statusName) {
+      const list = currentSnapshots.filter(s => s.status === statusName);
+      const banner = document.getElementById("status-breakdown-banner");
+      const titleEl = document.getElementById("status-breakdown-title");
+      const listEl = document.getElementById("status-breakdown-list");
+      titleEl.textContent = `Daftar Gudang Status "${statusName}" (${list.length}):`;
+      if (!list.length) {
+        listEl.innerHTML = `<span class="text-slate-500 italic">Tidak ada gudang pada status ini.</span>`;
+      } else {
+        listEl.innerHTML = list.map(s => `
+          <button onclick="setKpiFilter('${s.code}')" class="px-2.5 py-1 rounded-md text-xs font-bold btn-3d-secondary hover:border-blue-500">
+            ${s.name} <span class="font-mono text-slate-500">(${s.util.toFixed(1)}%)</span>
+          </button>`).join("");
+      }
+      banner.classList.remove("hidden");
+    }
+
+    function setCard4Health(title, badgeText, cntObj) {
+      const total = cntObj.Aman + cntObj.Warning + cntObj.Kritis + cntObj.Penuh;
+      const alertCnt = cntObj.Warning + cntObj.Kritis + cntObj.Penuh;
+      document.getElementById("kpi4-title").textContent = title;
+      const bEl = document.getElementById("kpi4-badge");
+      bEl.textContent = badgeText;
+      bEl.className = "text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md whitespace-nowrap";
+      document.getElementById("kpi4-main").textContent = `${alertCnt} Gudang`;
+      document.getElementById("kpi4-sub").textContent = "Siaga >=80%";
+      document.getElementById("kpi4-sub").className = "text-xs font-bold text-slate-600 whitespace-nowrap";
+      const bar = document.getElementById("kpi4-bar");
+      bar.innerHTML = total > 0 ? `
+        <div style="width:${cntObj.Aman/total*100}%" class="bg-emerald-600 h-full fill-3d rounded-l-full"></div>
+        <div style="width:${cntObj.Warning/total*100}%" class="bg-amber-500 h-full fill-3d"></div>
+        <div style="width:${cntObj.Kritis/total*100}%" class="bg-orange-500 h-full fill-3d"></div>
+        <div style="width:${cntObj.Penuh/total*100}%" class="bg-red-600 h-full fill-3d rounded-r-full"></div>` : "";
+
+      const namesOf = st => currentSnapshots.filter(s => s.status === st).map(s => `${s.name} (${s.util.toFixed(0)}%)`).join(", ") || "Tidak ada";
+      document.getElementById("kpi4-footer").innerHTML = `
+        <button type="button" onclick="showStatusBreakdown('Aman')" title="Klik lihat gudang Aman: ${namesOf('Aman')}" class="hover:underline">Aman: <b class="text-emerald-700">${cntObj.Aman}</b></button>
+        <button type="button" onclick="showStatusBreakdown('Warning')" title="Klik lihat gudang Warning: ${namesOf('Warning')}" class="hover:underline">Warn: <b class="text-amber-600">${cntObj.Warning}</b></button>
+        <button type="button" onclick="showStatusBreakdown('Kritis')" title="Klik lihat gudang Kritis: ${namesOf('Kritis')}" class="hover:underline">Kritis: <b class="text-orange-600">${cntObj.Kritis}</b></button>
+        <button type="button" onclick="showStatusBreakdown('Penuh')" title="Klik lihat gudang Penuh: ${namesOf('Penuh')}" class="hover:underline">Penuh: <b class="text-red-600">${cntObj.Penuh}</b></button>`;
+    }
+
+    function renderKPIs() {
+      if (!lastDashAgg) return;
+      const a = lastDashAgg;
+
+      // Update toggle buttons active state
+      ["ALL","CHAMBER","REEFER"].forEach(id => {
+        const btn = document.getElementById(`kpi-btn-${id}`);
+        btn.className = (kpiFilter === id)
+          ? "px-3 py-1 rounded-md text-xs font-bold btn-3d-primary"
+          : "px-3 py-1 rounded-md text-xs font-bold text-slate-700 hover:text-slate-950";
+      });
+      document.getElementById("kpi-reset-btn").classList.toggle("hidden", kpiFilter === "ALL");
+
+      if (kpiFilter === "ALL") {
+        const allBarClr = getStatusStyle(getStatus(a.totalUtilAll)).bar;
+        const activeUnitCount = 7 + (a.rfActivePltCap > 0 ? Math.round(a.rfActivePltCap / 18) : 0);
+        document.getElementById("kpi-scope-info").textContent = `Ringkasan gabungan ${activeUnitCount} gudang (7 Chamber + Reefer setara Pallet)`;
+        setCard(1, "Utilisasi Total", `${activeUnitCount} Gudang`, "text-blue-700 bg-blue-50", fmtPct(a.totalUtilAll), `Sisa ${fmtNum(Math.round(a.totalAvailPlt))} Plt`, "text-emerald-700", a.totalUtilAll*100, allBarClr, `Terpakai: <b class="text-slate-800">${fmtNum(Math.round(a.totalUsedPlt))}</b> Plt Eq`, `Cap: <b class="text-slate-800">${fmtNum(a.totalCapPlt)}</b> Plt`);
+        setCard(2, "Utilisasi Chamber", "7 Gudang", "text-indigo-700 bg-indigo-50", fmtPct(a.csUtil), `Sisa ${fmtNum(a.csAvail)} Plt`, "text-emerald-700", a.csUtil*100, "#2563eb", `Rak: <b class="text-slate-800">${fmtNum(a.csUsed)}</b>/${fmtNum(a.csCap)}`, `Floor: <b class="text-slate-800">${fmtNum(a.flUsed)}</b>/${fmtNum(a.flCap)} (${(a.flUtil*100).toFixed(0)}%)`);
+        setCard(3, "Utilisasi Reefer", "4 Unit", "text-emerald-700 bg-emerald-50", fmtPct(a.rfUtil), `Sisa ${fmtNum(a.rfAvail)} Box`, "text-emerald-700", a.rfUtil*100, "#059669", `Terpakai: <b class="text-slate-800">${fmtNum(a.rfUsed)}</b> Box`, `Setara: <b class="text-slate-800">${Math.round(a.rfUsedPltEq)}</b>/${a.rfCapPlt} Plt`);
+        setCard4Health("Status Kesehatan Gudang", "11 Total", a.counts);
+        return;
+      }
+
+      if (kpiFilter === "CHAMBER") {
+        document.getElementById("kpi-scope-info").textContent = "Filter aktif: Semua Chamber Cold Storage (7 Gudang)";
+        const chSnaps = currentSnapshots.filter(s => s.type === "CHAMBER");
+        const chCnt = { Aman:0, Warning:0, Kritis:0, Penuh:0 };
+        chSnaps.forEach(s => chCnt[s.status]++);
+        setCard(1, "Utilisasi Rak Chamber", "7 Gudang", "text-blue-700 bg-blue-50", fmtPct(a.csUtil), `Sisa ${fmtNum(a.csAvail)} Plt`, "text-emerald-700", a.csUtil*100, "#2563eb", `Terpakai: <b class="text-slate-800">${fmtNum(a.csUsed)}</b> Plt`, `Kapasitas: <b class="text-slate-800">${fmtNum(a.csCap)}</b> Plt`);
+        setCard(2, "Okupansi Floor (Lantai)", "Overflow", "text-slate-600 bg-slate-100", fmtPct(a.flUtil), `Sisa ${fmtNum(Math.max(0,a.flCap-a.flUsed))} Plt`, "text-slate-600", a.flUtil*100, "#4f46e5", `Di Lantai: <b class="text-slate-800">${fmtNum(a.flUsed)}</b> Plt`, `Cap. Floor: <b class="text-slate-800">${fmtNum(a.flCap)}</b> Plt`);
+        setCard(3, "Extended % (Rak + Floor)", "Gabungan", "text-indigo-700 bg-indigo-50", fmtPct(a.csUtil+a.flUtil), `Utama + AddOn`, "text-slate-600", Math.min(100,(a.csUtil+a.flUtil)/2*100), "#6366f1", `Used Utama: <b class="text-slate-800">${fmtNum(a.csUtama)}</b> Plt`, `AddOn: <b class="text-slate-800">${fmtNum(a.csAddOn)}</b> Plt`);
+        setCard4Health("Status Chamber", "7 Gudang", chCnt);
+        return;
+      }
+
+      if (kpiFilter === "REEFER") {
+        document.getElementById("kpi-scope-info").textContent = "Filter aktif: Semua Reefer SKBM (4 Unit)";
+        const rfSnaps = currentSnapshots.filter(s => s.type === "REEFER");
+        const rfCnt = { Aman:0, Warning:0, Kritis:0, Penuh:0 };
+        rfSnaps.forEach(s => rfCnt[s.status]++);
+        const avgBox = rfSnaps.length ? Math.round(a.rfUsed / rfSnaps.length) : 0;
+        setCard(1, "Utilisasi Reefer SKBM", "4 Unit", "text-emerald-700 bg-emerald-50", fmtPct(a.rfUtil), `Sisa ${fmtNum(a.rfAvail)} Box`, "text-emerald-700", a.rfUtil*100, "#059669", `Terpakai: <b class="text-slate-800">${fmtNum(a.rfUsed)}</b> Box`, `Kapasitas: <b class="text-slate-800">${fmtNum(a.rfCap)}</b> Box`);
+        setCard(2, "Kapasitas Pallet Reefer", "4 x 18 Plt", "text-slate-600 bg-slate-100", "72 Plt", "Standar Container", "text-slate-600", 100, "#0284c7", `Per Unit: <b class="text-slate-800">18</b> Plt`, `Total: <b class="text-slate-800">72</b> Plt`);
+        setCard(3, "Rata-rata Muatan / Unit", "Kubikasi", "text-blue-700 bg-blue-50", `${fmtNum(avgBox)} Box`, `Dari 4 Unit`, "text-slate-600", a.rfUtil*100, "#2563eb", `Terpakai: <b class="text-slate-800">${fmtNum(a.rfUsed)}</b> Box`, `Available: <b class="text-emerald-700">${fmtNum(a.rfAvail)}</b> Box`);
+        setCard4Health("Status Reefer SKBM", "4 Unit", rfCnt);
+        return;
+      }
+
+      // SINGLE WAREHOUSE FILTER
+      const snap = currentSnapshots.find(s => s.code === kpiFilter);
+      const m = WAREHOUSE_MASTER[kpiFilter];
+      if (!snap) {
+        document.getElementById("kpi-scope-info").textContent = `Filter aktif: ${m.dashName} (Tidak ada data di tanggal ini)`;
+        setCard(1, `Utilisasi ${m.dashName}`, kpiFilter, "text-slate-600 bg-slate-100", "-", "Tidak ada data", "text-slate-400", 0, "#94a3b8", `Cap: <b>${fmtNum(m.capacity)}</b>`, "Used: -");
+        setCard(2, "Detail Sekunder", "-", "text-slate-600 bg-slate-100", "-", "-", "text-slate-400", 0, "#94a3b8", "-", "-");
+        setCard(3, "Rincian Stok", "-", "text-slate-600 bg-slate-100", "-", "-", "text-slate-400", 0, "#94a3b8", "-", "-");
+        setCard4Health("Status Gudang", "No Data", { Aman:0, Warning:0, Kritis:0, Penuh:0 });
+        return;
+      }
+
+      const barClr = getStatusStyle(snap.status).bar;
+      document.getElementById("kpi-scope-info").textContent = `Filter aktif: ${m.dashName} (${kpiFilter}) — Data tanggal ${fmtDateID(snap.date)}`;
+
+      if (snap.type === "CHAMBER") {
+        setCard(1, `Utilisasi Rak (${m.dashName})`, kpiFilter, "text-blue-700 bg-blue-50", fmtPct(snap.utilRatio), `Sisa ${fmtNum(snap.avail)} Plt`, "text-emerald-700", snap.util, barClr, `Terpakai: <b class="text-slate-800">${fmtNum(snap.used)}</b> Plt`, `Kapasitas: <b class="text-slate-800">${fmtNum(snap.cap)}</b> Plt`);
+        setCard(2, `Okupansi Floor (${kpiFilter})`, "Lantai", "text-slate-600 bg-slate-100", fmtPct(snap.flUtil), `Sisa ${fmtNum(Math.max(0,snap.flCap-snap.fl))} Plt`, "text-slate-600", snap.flUtil*100, "#4f46e5", `Di Lantai: <b class="text-slate-800">${fmtNum(snap.fl)}</b> Plt`, `Cap. Floor: <b class="text-slate-800">${fmtNum(snap.flCap)}</b> Plt`);
+        setCard(3, `Extended % (${kpiFilter})`, "Rak + Floor", "text-indigo-700 bg-indigo-50", fmtPct(snap.extRatio), snap.addOn > 0 ? "Ada AddOn" : "Tanpa AddOn", "text-slate-600", Math.min(100, snap.extRatio/2*100), "#6366f1", `Utama: <b class="text-slate-800">${fmtNum(snap.utama)}</b> Plt`, `AddOn: <b class="text-slate-800">${fmtNum(snap.addOn)}</b> Plt`);
+      } else {
+        setCard(1, `Utilisasi Box (${kpiFilter})`, "Reefer", "text-emerald-700 bg-emerald-50", fmtPct(snap.utilRatio), `Sisa ${fmtNum(snap.avail)} Box`, "text-emerald-700", snap.util, barClr, `Terpakai: <b class="text-slate-800">${fmtNum(snap.used)}</b> Box`, `Kapasitas: <b class="text-slate-800">${fmtNum(snap.cap)}</b> Box`);
+        setCard(2, `Kapasitas Pallet Eq.`, kpiFilter, "text-slate-600 bg-slate-100", `${snap.palletCap} Plt`, "Standar Container", "text-slate-600", 100, "#0284c7", `Satuan: <b class="text-slate-800">Box</b>`, `Max: <b class="text-slate-800">${fmtNum(snap.cap)}</b> Box`);
+        setCard(3, `Rincian Kategori Produk`, "Isi Reefer", "text-blue-700 bg-blue-50", `${fmtNum(snap.used)} Box`, snap.detail || "-", "text-slate-700", snap.util, "#2563eb", `Used: <b class="text-slate-800">${fmtNum(snap.used)}</b> Box`, `Avail: <b class="text-emerald-700">${fmtNum(snap.avail)}</b> Box`);
+      }
+
+      // Card 4 for single warehouse: Status + Date + Avg Suhu
+      document.getElementById("kpi4-title").textContent = `Status & Suhu (${kpiFilter})`;
+      const b4 = document.getElementById("kpi4-badge");
+      b4.textContent = fmtDateID(snap.date);
+      b4.className = "text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-mono";
+      document.getElementById("kpi4-main").innerHTML = getStatusBadge(snap.status);
+      document.getElementById("kpi4-sub").textContent = `Suhu Rata-rata: ${snap.avgTemp}`;
+      document.getElementById("kpi4-sub").className = "text-xs font-semibold text-slate-700";
+      document.getElementById("kpi4-bar").innerHTML = `<div style="width:${Math.min(100,snap.util)}%; background:${barClr}" class="h-full"></div>`;
+      document.getElementById("kpi4-footer").innerHTML = `
+        <span>Utilisasi: <b class="text-slate-900">${snap.util.toFixed(2)}%</b></span>
+        <button onclick="openFormForWarehouse('${kpiFilter}','${snap.date}')" class="text-blue-700 font-semibold hover:underline">Update Gudang &rarr;</button>`;
+    }
+
+    // CHART 1: HORIZONTAL BAR COMPARISON PER GUDANG / DETAIL GUDANG TERPILIH
+    function renderBarChart() {
+      const grp = document.getElementById("bar-group-select").value;
+      const container = document.getElementById("bar-chart-container");
+      const titleEl = document.getElementById("bar-chart-title");
+      const subEl = document.getElementById("bar-chart-subtitle");
+
+      let items = [];
+      if (grp === "ALL" || grp === "CHAMBER" || grp === "REEFER") {
+        titleEl.textContent = "Perbandingan Utilisasi per Gudang (%)";
+        subEl.textContent = grp === "ALL" ? "Seluruh 11 gudang terhadap batas 80% & 100%" : (grp === "CHAMBER" ? "7 Gudang Chamber Cold Storage (Pallet)" : "4 Unit Reefer SKBM (Box)");
+        items = currentSnapshots.filter(s => grp==="ALL" || s.type===grp);
+      } else {
+        const snap = currentSnapshots.find(s => s.code === grp);
+        const m = WAREHOUSE_MASTER[grp];
+        titleEl.textContent = `Rincian Utilisasi: ${m ? m.dashName : grp}`;
+        if (!snap) {
+          subEl.textContent = "Tidak ada data pada tanggal terpilih";
+          container.innerHTML = `<div class="py-16 text-center text-xs text-slate-400">Tidak ada data untuk ${grp}</div>`;
+          return;
+        }
+        if (snap.type === "CHAMBER") {
+          subEl.textContent = `Rak (${fmtNum(snap.used)}/${fmtNum(snap.cap)} Plt) & Floor (${fmtNum(snap.fl)}/${fmtNum(snap.flCap)} Plt)`;
+          items = [
+            { name: "Utilisasi Rak", util: snap.util, status: snap.status },
+            { name: "Utilisasi Floor", util: snap.flUtil * 100, status: getStatus(snap.flUtil) },
+            { name: "Extended %", util: snap.extRatio * 100, status: getStatus(snap.extRatio) }
+          ];
+        } else {
+          subEl.textContent = `Terpakai ${fmtNum(snap.used)} / ${fmtNum(snap.cap)} Box (Sisa ${fmtNum(snap.avail)} Box)`;
+          const availPct = snap.cap > 0 ? (snap.avail / snap.cap) * 100 : 0;
+          items = [
+            { name: "Terpakai (Used)", util: snap.util, status: snap.status },
+            { name: "Sisa (Available)", util: availPct, status: "Aman" }
+          ];
+        }
+      }
+
+      if (!items.length) { container.innerHTML = `<div class="py-16 text-center text-xs text-slate-400">Tidak ada data</div>`; return; }
+
+      const rowH = items.length <= 4 ? 32 : 24, padL = 104, padR = 48, padT = 10, padB = 22, W = 540;
+      const H = Math.max(120, padT + padB + items.length * rowH);
+      const plotW = W - padL - padR;
+      const maxX = Math.max(105, ...items.map(it => it.util));
+      const xOf = v => padL + (Math.min(maxX, Math.max(0, v)) / maxX) * plotW;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" class="w-full" style="max-height: 290px;">
+          <line x1="${xOf(50)}"  y1="${padT}" x2="${xOf(50)}"  y2="${H-padB}" stroke="#e2e8f0" stroke-width="1" />
+          <line x1="${xOf(80)}"  y1="${padT}" x2="${xOf(80)}"  y2="${H-padB}" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 3" />
+          <line x1="${xOf(100)}" y1="${padT}" x2="${xOf(100)}" y2="${H-padB}" stroke="#dc2626" stroke-width="1" stroke-dasharray="3 3" />
+          ${items.map((it, i) => {
+            const y = padT + i * rowH + 4;
+            const barW = Math.max(2, xOf(it.util) - padL);
+            const clr = getStatusStyle(it.status).bar;
+            return `
+              <text x="${padL-8}" y="${y+11}" text-anchor="end" font-size="11" font-weight="700" fill="#0f172a">${it.name}</text>
+              <rect x="${padL}" y="${y}" width="${plotW}" height="15" rx="3" fill="#e2e8f0" />
+              <rect x="${padL}" y="${y+2}" width="${barW.toFixed(1)}" height="14" rx="3" fill="#0f172a" opacity="0.16" />
+              <rect x="${padL}" y="${y}" width="${barW.toFixed(1)}" height="14" rx="3" fill="${clr}" />
+              <rect x="${padL}" y="${y+1}" width="${Math.max(0, barW-2).toFixed(1)}" height="3" rx="1.5" fill="#ffffff" opacity="0.28" />
+              <text x="${padL+plotW+6}" y="${y+11}" text-anchor="start" font-size="11" font-weight="700" fill="#090d16">${it.util.toFixed(1)}%</text>`;
+          }).join("")}
+          <text x="${padL}" y="${H-6}" text-anchor="middle" font-size="10" fill="#64748b">0%</text>
+          <text x="${xOf(50)}" y="${H-6}" text-anchor="middle" font-size="10" fill="#64748b">50%</text>
+          <text x="${xOf(80)}" y="${H-6}" text-anchor="middle" font-size="10" fill="#d97706">80%</text>
+          <text x="${xOf(100)}" y="${H-6}" text-anchor="middle" font-size="10" fill="#dc2626">100%</text>
+        </svg>`;
+    }
+
+    // CHART 2: TREND LINE CHART (COMPARE, GROUP, OR SINGLE)
+    function renderTrendChart() {
+      const target = document.getElementById("chart-target-select").value;
+      const container = document.getElementById("trend-chart-container");
+      const legendEl = document.getElementById("trend-legend");
+      const W=540, H=240, padL=36, padR=12, padT=14, padB=24, plotW=W-padL-padR, plotH=H-padT-padB;
+
+      const buildGroupSeries = (logs) => {
+        const dates = Array.from(new Set(logs.map(r=>r.date))).sort();
+        return dates.map(d => {
+          const rows = logs.filter(r=>r.date===d);
+          let u=0, c=0;
+          rows.forEach(r => { u+=Number(r.u1||0)+Number(r.u2||0)+Number(r.u3||0)+Number(r.u4||0); c+=WAREHOUSE_MASTER[r.code].capacity; });
+          return { date:d, pct: c>0?(u/c)*100:0 };
+        });
+      };
+
+      let s1 = [], s2 = [];
+      let s1Label = "Chamber (%)", s2Label = "Reefer (%)";
+
+      if (target === "COMPARE") {
+        s1 = buildGroupSeries(chamberLogs);
+        s2 = buildGroupSeries(reeferLogs);
+        document.getElementById("trend-subtitle").textContent = "Perbandingan tren gabungan Chamber (biru) vs Reefer (hijau)";
+        legendEl.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-blue-600 inline-block"></span> Chamber (%)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-emerald-600 inline-block"></span> Reefer (%)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-0.5 border-t-2 border-dashed border-amber-500 inline-block"></span> Batas 80%</span>`;
+      } else if (target === "ALL_CHAMBER") {
+        s1 = buildGroupSeries(chamberLogs);
+        document.getElementById("trend-subtitle").textContent = "Tren gabungan seluruh 7 Chamber Cold Storage";
+        legendEl.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-blue-600 inline-block"></span> Gabungan 7 Chamber (%)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-0.5 border-t-2 border-dashed border-amber-500 inline-block"></span> Batas 80%</span>`;
+      } else if (target === "ALL_REEFER") {
+        s2 = buildGroupSeries(reeferLogs);
+        document.getElementById("trend-subtitle").textContent = "Tren gabungan seluruh 4 Unit Reefer SKBM";
+        legendEl.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded bg-emerald-600 inline-block"></span> Gabungan 4 Reefer (%)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-0.5 border-t-2 border-dashed border-amber-500 inline-block"></span> Batas 80%</span>`;
+      } else {
+        const m = WAREHOUSE_MASTER[target];
+        const logs = (m.type==="CHAMBER"?chamberLogs:reeferLogs).filter(r=>r.code===target).sort((a,b)=>a.date.localeCompare(b.date));
+        const pts = logs.map(r => ({ date:r.date, pct: m.capacity>0?((Number(r.u1||0)+Number(r.u2||0)+Number(r.u3||0)+Number(r.u4||0))/m.capacity)*100:0 }));
+        if (m.type === "CHAMBER") { s1 = pts; s1Label = m.dashName; }
+        else { s2 = pts; s2Label = m.dashName; }
+        document.getElementById("trend-subtitle").textContent = `Riwayat utilisasi harian: ${m.dashName}`;
+        const dotClr = m.type === "CHAMBER" ? "bg-blue-600" : "bg-emerald-600";
+        legendEl.innerHTML = `
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-1 rounded ${dotClr} inline-block"></span> ${m.dashName} (%)</span>
+          <span class="inline-flex items-center gap-1.5"><span class="w-3 h-0.5 border-t-2 border-dashed border-amber-500 inline-block"></span> Batas 80%</span>`;
+      }
+
+      const allDates = Array.from(new Set([...s1.map(x=>x.date), ...s2.map(x=>x.date)])).sort();
+      if (!allDates.length) { container.innerHTML = `<div class="py-16 text-center text-xs text-slate-400">Belum ada data</div>`; return; }
+
+      const allPcts = [...s1.map(x=>x.pct), ...s2.map(x=>x.pct)];
+      const maxPct = Math.max(105, ...allPcts);
+      const xByDate = d => allDates.length===1 ? padL+plotW/2 : padL + (allDates.indexOf(d)/(allDates.length-1))*plotW;
+      const yOf = p => padT+plotH-(Math.min(maxPct,Math.max(0,p))/maxPct)*plotH;
+
+      const pts1 = s1.map(x => `${xByDate(x.date).toFixed(1)},${yOf(x.pct).toFixed(1)}`).join(" ");
+      const pts2 = s2.map(x => `${xByDate(x.date).toFixed(1)},${yOf(x.pct).toFixed(1)}`).join(" ");
+
+      document.getElementById("chart-stats-text").textContent = `${allDates.length} hari (${fmtDateID(allDates[0])} - ${fmtDateID(allDates[allDates.length-1])})`;
+
+      container.innerHTML = `
+        <svg viewBox="0 0 ${W} ${H}" class="w-full" style="max-height: 260px;">
+          <line x1="${padL}" y1="${yOf(100)}" x2="${W-padR}" y2="${yOf(100)}" stroke="#e2e8f0" stroke-width="1" />
+          <line x1="${padL}" y1="${yOf(80)}"  x2="${W-padR}" y2="${yOf(80)}"  stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 3" />
+          <line x1="${padL}" y1="${yOf(50)}"  x2="${W-padR}" y2="${yOf(50)}"  stroke="#e2e8f0" stroke-width="1" />
+          <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="#cbd5e1" stroke-width="1" />
+
+          <text x="${padL-6}" y="${yOf(100)+3}" text-anchor="end" font-size="10" fill="#64748b">100%</text>
+          <text x="${padL-6}" y="${yOf(80)+3}"  text-anchor="end" font-size="10" fill="#d97706">80%</text>
+          <text x="${padL-6}" y="${yOf(50)+3}"  text-anchor="end" font-size="10" fill="#64748b">50%</text>
+          <text x="${padL-6}" y="${padT+plotH+3}" text-anchor="end" font-size="10" fill="#64748b">0%</text>
+
+          ${pts1 ? `<polyline fill="none" stroke="#1d4ed8" stroke-width="2.2" stroke-linejoin="round" points="${pts1}" />` : ""}
+          ${pts2 ? `<polyline fill="none" stroke="#059669" stroke-width="2.2" stroke-linejoin="round" points="${pts2}" />` : ""}
+
+          ${s1.map(x => `<circle cx="${xByDate(x.date).toFixed(1)}" cy="${yOf(x.pct).toFixed(1)}" r="2.2" fill="#1d4ed8"><title>${s1Label} ${fmtDateID(x.date)}: ${x.pct.toFixed(1)}%</title></circle>`).join("")}
+          ${s2.map(x => `<circle cx="${xByDate(x.date).toFixed(1)}" cy="${yOf(x.pct).toFixed(1)}" r="2.2" fill="#059669"><title>${s2Label} ${fmtDateID(x.date)}: ${x.pct.toFixed(1)}%</title></circle>`).join("")}
+
+          <text x="${padL}" y="${H-6}" text-anchor="start" font-size="10" fill="#64748b">${fmtDateID(allDates[0])}</text>
+          <text x="${padL+plotW/2}" y="${H-6}" text-anchor="middle" font-size="10" fill="#64748b">${fmtDateID(allDates[Math.floor(allDates.length/2)])}</text>
+          <text x="${W-padR}" y="${H-6}" text-anchor="end" font-size="10" fill="#64748b">${fmtDateID(allDates[allDates.length-1])}</text>
+        </svg>`;
+    }
+
+    // FORM (ONLY RENDER ACTIVE FIELDS)
+    function onWarehouseChange() {
+      const code = document.getElementById("input-warehouse").value;
+      const m = WAREHOUSE_MASTER[code];
+      const isCh = m.type === "CHAMBER";
+
+      document.getElementById("info-cap-main").textContent = fmtNum(m.capacity) + (isCh ? " Pallet" : " Box");
+      document.getElementById("info-cap-sub-label").textContent = isCh ? "Kapasitas Floor" : "Pallet Eq.";
+      document.getElementById("info-cap-sub").textContent = isCh ? fmtNum(m.addFloor) + " Pallet" : m.palletCap + " Pallet";
+      document.getElementById("info-sheet-target").textContent = isCh ? "DB_Chamber" : "DB_Reefer";
+
+      document.getElementById("floor-input-container").classList.toggle("hidden", !isCh);
+      document.getElementById("prev-floor-box").classList.toggle("hidden", !isCh);
+      document.getElementById("prev-ext-box").classList.toggle("hidden", !isCh);
+
+      // ONLY render fields where active === true!
+      document.getElementById("dynamic-stock-inputs").innerHTML = m.fields
+        .filter(f => f.active)
+        .map(f => `
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">${f.label}</label>
+            <input type="number" id="field-${f.key}" min="0" value="0" oninput="calculateLivePreview()"
+              class="w-full px-3 py-2 rounded-md text-xs font-mono bg-white border border-slate-300 text-slate-900 focus:outline-none focus:border-blue-600" />
+          </div>`).join("");
+
+      prefillExistingOrLatest();
+    }
+
+    function cancelFormInput() {
+      prefillExistingOrLatest();
+      switchTab("dashboard");
+    }
+
+    function focusFormEdit() {
+      const firstInput = document.getElementById("field-u1") || document.getElementById("input-floor");
+      const wrap = document.getElementById("dynamic-stock-inputs");
+      if (wrap) {
+        wrap.classList.add("ring-2", "ring-amber-400", "rounded-lg", "p-2", "bg-amber-50/40", "transition");
+        setTimeout(() => wrap.classList.remove("ring-2", "ring-amber-400", "rounded-lg", "p-2", "bg-amber-50/40"), 1500);
+      }
+      if (firstInput) { firstInput.focus(); firstInput.select(); }
+      const d = document.getElementById("input-date").value;
+      const code = document.getElementById("input-warehouse").value;
+      showToast(`Mode Edit aktif untuk ${code} (${fmtDateID(d)}): ubah angka di bawah lalu klik Simpan Perubahan.`);
+    }
+
+    function clearFormToZero() {
+      ["u1","u2","u3","u4"].forEach(k => { const el = document.getElementById(`field-${k}`); if (el) el.value = 0; });
+      const fl = document.getElementById("input-floor"); if (fl) fl.value = 0;
+      const tp = document.getElementById("input-temp"); if (tp) tp.value = "";
+      const nt = document.getElementById("input-note"); if (nt) nt.value = "";
+      calculateLivePreview();
+      const firstInput = document.getElementById("field-u1");
+      if (firstInput) { firstInput.focus(); firstInput.select(); }
+    }
+
+    function prefillExistingOrLatest() {
+      const code = document.getElementById("input-warehouse").value;
+      const dateStr = document.getElementById("input-date").value;
+      const m = WAREHOUSE_MASTER[code];
+      const list = m.type==="CHAMBER" ? chamberLogs : reeferLogs;
+      const exact = list.find(r=>r.code===code && r.date===dateStr);
+      const latest = list.filter(r=>r.code===code).slice(-1)[0];
+      const src = exact || latest || { u1:0,u2:0,u3:0,u4:0,fl:0,temp:"",note:m.defaultNote||"" };
+
+      const badge = document.getElementById("form-mode-badge");
+      const submitBtn = document.getElementById("btn-form-submit");
+      if (exact) {
+        badge.textContent = "Edit Data Tanggal Ini ✎";
+        badge.className = "text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 border-b-2 hover:bg-amber-100 active:translate-y-px transition cursor-pointer";
+        if (submitBtn && !submitBtn.disabled) submitBtn.textContent = "Simpan Perubahan";
+      } else {
+        badge.textContent = "Entri Baru (Prefill Terakhir)";
+        badge.className = "text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-300 border-b-2 hover:bg-blue-100 active:translate-y-px transition cursor-pointer";
+        if (submitBtn && !submitBtn.disabled) submitBtn.textContent = "Simpan Data Baru";
+      }
+
+      ["u1","u2","u3","u4"].forEach(k => { const el = document.getElementById(`field-${k}`); if (el) el.value = Number(src[k]||0); });
+      document.getElementById("input-floor").value = Number(src.fl||0);
+      document.getElementById("input-temp").value  = src.temp!==undefined && src.temp!==null ? src.temp : "";
+      document.getElementById("input-note").value  = src.note || m.defaultNote || "";
+      calculateLivePreview();
+    }
+
+    function calculateLivePreview() {
+      const code = document.getElementById("input-warehouse").value;
+      const m = WAREHOUSE_MASTER[code];
+      const u1=Number(document.getElementById("field-u1")?.value||0), u2=Number(document.getElementById("field-u2")?.value||0);
+      const u3=Number(document.getElementById("field-u3")?.value||0), u4=Number(document.getElementById("field-u4")?.value||0);
+      const fl=Number(document.getElementById("input-floor")?.value||0);
+      const total=u1+u2+u3+u4, avail=Math.max(0,m.capacity-total), util=m.capacity>0?total/m.capacity:0;
+      const flUtil=(m.type==="CHAMBER"&&m.addFloor>0)?fl/m.addFloor:0, status=getStatus(util);
+      const unit=m.type==="CHAMBER"?" Plt":" Box";
+
+      document.getElementById("prev-util-top").textContent = fmtPct(util);
+      const bar = document.getElementById("prev-util-bar");
+      bar.style.width = Math.min(100, util*100)+"%";
+      bar.style.backgroundColor = getStatusStyle(status).bar;
+      document.getElementById("prev-total-used").textContent = fmtNum(total)+unit;
+      document.getElementById("prev-avail").textContent = (avail>0?fmtNum(avail):"0")+unit;
+      document.getElementById("prev-util-floor").textContent = fmtPct(flUtil);
+      document.getElementById("prev-ext").textContent = fmtPct(util+flUtil);
+      document.getElementById("prev-status").outerHTML = `<span id="prev-status">${getStatusBadge(status)}</span>`;
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const code = document.getElementById("input-warehouse").value;
+      const m = WAREHOUSE_MASTER[code];
+      const dateStr = document.getElementById("input-date").value;
+      const u1=Number(document.getElementById("field-u1")?.value||0), u2=Number(document.getElementById("field-u2")?.value||0);
+      const u3=Number(document.getElementById("field-u3")?.value||0), u4=Number(document.getElementById("field-u4")?.value||0);
+      const fl=Number(document.getElementById("input-floor")?.value||0);
+      const tRaw=document.getElementById("input-temp")?.value;
+      const temp=tRaw!==""?Number(tRaw):null;
+      const note=document.getElementById("input-note")?.value||"";
+
+      const list = m.type==="CHAMBER" ? chamberLogs : reeferLogs;
+      const idx = list.findIndex(r=>r.code===code && r.date===dateStr);
+      const entry = m.type==="CHAMBER" ? { date:dateStr,code,u1,u2,u3,u4,fl,temp,note } : { date:dateStr,code,u1,u2,u3,u4,temp,note };
+      if (idx>=0) list[idx]=entry; else { list.push(entry); list.sort((a,b)=>a.date.localeCompare(b.date)||a.code.localeCompare(b.code)); }
+      saveLocal(); populateDateDropdown(); renderAll();
+
+      const gasUrl = getGasUrl();
+      if (gasUrl) {
+        const btn = document.getElementById("btn-form-submit");
+        btn.textContent = "Menyimpan..."; btn.disabled = true;
+        try {
+          const res = await fetch(gasUrl, {
+            method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: "upsert", type: m.type, date: dateStr, code, u1, u2, u3, u4, fl, temp, note })
+          });
+          const data = await res.json();
+          if (!data.ok) throw new Error(data.error || "Gagal menulis ke Google Sheets");
+          showToast(`Data ${code} (${fmtDateID(dateStr)}) tersimpan ke Google Sheets (baris ${data.row}).`);
+        } catch (err) {
+          showToast("Tersimpan di lokal, gagal kirim ke Google Sheets: " + err.message, true);
+        } finally { btn.disabled = false; prefillExistingOrLatest(); }
+      } else {
+        showToast(`Data ${code} (${fmtDateID(dateStr)}) disimpan secara lokal.`);
+        prefillExistingOrLatest();
+      }
+      switchTab("dashboard");
+    }
+
+    function openFormForWarehouse(code, dateOpt) {
+      switchTab("form");
+      if (dateOpt) document.getElementById("input-date").value = dateOpt;
+      document.getElementById("input-warehouse").value = code;
+      onWarehouseChange();
+    }
+
+    function copyRowForGSheets() {
+      const code = document.getElementById("input-warehouse").value;
+      const m = WAREHOUSE_MASTER[code];
+      const dateStr = document.getElementById("input-date").value;
+      const u1=Number(document.getElementById("field-u1")?.value||0), u2=Number(document.getElementById("field-u2")?.value||0);
+      const u3=Number(document.getElementById("field-u3")?.value||0), u4=Number(document.getElementById("field-u4")?.value||0);
+      const fl=Number(document.getElementById("input-floor")?.value||0);
+      const temp=document.getElementById("input-temp")?.value||"";
+      const note=document.getElementById("input-note")?.value||"";
+      const line = m.type==="CHAMBER" ? [dateStr,code,u1,u2||"",u3||"",u4||"",fl,temp,note].join("\t") : [dateStr,code,u1,u2||"",u3||"",u4||"",temp,note].join("\t");
+      navigator.clipboard?.writeText(line);
+      showToast("Baris tersalin (siap Ctrl+V ke kolom B di Google Sheets).");
+    }
+
+    function renderChamberDB() {
+      const fCode = document.getElementById("filter-chamber").value, fMonth = document.getElementById("filter-chamber-month").value;
+      const rows = chamberLogs.filter(r=>(fCode==="ALL"||r.code===fCode)&&(fMonth==="ALL"||r.date.split("-")[1]===fMonth)).slice().reverse();
+      document.getElementById("db-chamber-count").textContent = rows.length;
+      document.getElementById("db-chamber-tbody").innerHTML = rows.map((r,i)=>{
+        const m=WAREHOUSE_MASTER[r.code], total=Number(r.u1||0)+Number(r.u2||0)+Number(r.u3||0)+Number(r.u4||0), avail=Math.max(0,m.capacity-total);
+        const util=m.capacity>0?total/m.capacity:0, flUtil=m.addFloor>0?Number(r.fl||0)/m.addFloor:0;
+        return `<tr class="hover:bg-slate-50"><td class="py-1.5 px-2.5 text-center text-slate-400">${i+1}</td><td class="py-1.5 px-2.5 font-mono">${fmtDateID(r.date)}</td><td class="py-1.5 px-2.5 font-semibold">${r.code}</td><td class="py-1.5 px-2.5 text-right">${fmtNum(r.u1)}</td><td class="py-1.5 px-2.5 text-right text-slate-500">${r.u2>0?fmtNum(r.u2):""}</td><td class="py-1.5 px-2.5 text-right text-slate-500">${r.u3>0?fmtNum(r.u3):""}</td><td class="py-1.5 px-2.5 text-right text-slate-500">${r.u4>0?fmtNum(r.u4):""}</td><td class="py-1.5 px-2.5 text-right">${fmtNum(r.fl)}</td><td class="py-1.5 px-2.5 text-center font-mono text-slate-500">${r.temp!=null&&r.temp!==""?r.temp+"°C":"-"}</td><td class="py-1.5 px-2.5">${getMonthName(r.date)}</td><td class="py-1.5 px-2.5 text-right">${fmtNum(m.capacity)}</td><td class="py-1.5 px-2.5 text-right font-bold">${fmtNum(total)}</td><td class="py-1.5 px-2.5 text-right text-emerald-700">${avail>0?fmtNum(avail):"-"}</td><td class="py-1.5 px-2.5 text-right">${fmtPct(util)}</td><td class="py-1.5 px-2.5 text-right">${fmtPct(flUtil)}</td><td class="py-1.5 px-2.5 text-right">${fmtPct(util+flUtil)}</td><td class="py-1.5 px-2.5 text-center">${getStatusBadge(getStatus(util))}</td><td class="py-1.5 px-2.5 text-center"><button type="button" onclick="openFormForWarehouse('${r.code}','${r.date}')" class="px-2 py-0.5 rounded text-[11px] font-bold btn-3d-secondary text-blue-700">Edit</button></td></tr>`;
+      }).join("");
+    }
+
+    function renderReeferDB() {
+      const fCode = document.getElementById("filter-reefer").value, fMonth = document.getElementById("filter-reefer-month").value;
+      const rows = reeferLogs.filter(r=>(fCode==="ALL"||r.code===fCode)&&(fMonth==="ALL"||r.date.split("-")[1]===fMonth)).slice().reverse();
+      document.getElementById("db-reefer-count").textContent = rows.length;
+      document.getElementById("db-reefer-tbody").innerHTML = rows.map((r,i)=>{
+        const m=WAREHOUSE_MASTER[r.code], total=Number(r.u1||0)+Number(r.u2||0)+Number(r.u3||0)+Number(r.u4||0), avail=Math.max(0,m.capacity-total), util=m.capacity>0?total/m.capacity:0;
+        return `<tr class="hover:bg-slate-50"><td class="py-1.5 px-2.5 text-center text-slate-400">${i+1}</td><td class="py-1.5 px-2.5 font-mono">${fmtDateID(r.date)}</td><td class="py-1.5 px-2.5 font-semibold">${r.code}</td><td class="py-1.5 px-2.5 text-right">${fmtNum(r.u1)}</td><td class="py-1.5 px-2.5 text-right text-slate-500">${r.u2>0?fmtNum(r.u2):""}</td><td class="py-1.5 px-2.5 text-right text-slate-500">${r.u3>0?fmtNum(r.u3):""}</td><td class="py-1.5 px-2.5 text-right text-slate-500">${r.u4>0?fmtNum(r.u4):""}</td><td class="py-1.5 px-2.5 text-center font-mono text-slate-500">${r.temp!=null&&r.temp!==""?r.temp+"°C":"-"}</td><td class="py-1.5 px-2.5 text-slate-600">${r.note||""}</td><td class="py-1.5 px-2.5">${getMonthName(r.date)}</td><td class="py-1.5 px-2.5 text-right">${fmtNum(m.capacity)}</td><td class="py-1.5 px-2.5 text-right font-bold">${fmtNum(total)}</td><td class="py-1.5 px-2.5 text-right text-emerald-700">${avail>0?fmtNum(avail):"-"}</td><td class="py-1.5 px-2.5 text-right">${fmtPct(util)}</td><td class="py-1.5 px-2.5 text-center">${getStatusBadge(getStatus(util))}</td><td class="py-1.5 px-2.5 text-center"><button type="button" onclick="openFormForWarehouse('${r.code}','${r.date}')" class="px-2 py-0.5 rounded text-[11px] font-bold btn-3d-secondary text-blue-700">Edit</button></td></tr>`;
+      }).join("");
+    }
+
+    function renderMasterTable() {
+      document.getElementById("master-table-tbody").innerHTML = Object.values(WAREHOUSE_MASTER).map(m => `
+        <tr class="hover:bg-slate-50"><td class="py-2 px-3 font-mono font-bold">${m.code}</td><td class="py-2 px-3 font-semibold">${m.dashName}</td><td class="py-2 px-3">${m.type}</td><td class="py-2 px-3 text-right">${fmtNum(m.capacity)} ${m.type==='CHAMBER'?'Plt':'Box'}</td><td class="py-2 px-3 text-right">${m.addFloor?fmtNum(m.addFloor)+' Plt':'-'}</td><td class="py-2 px-3">${m.fields[0].label}</td><td class="py-2 px-3 text-slate-500">${m.fields[1].active?m.fields[1].label:'-'}</td><td class="py-2 px-3 text-slate-500">${m.fields[2].active?m.fields[2].label:'-'}</td><td class="py-2 px-3 text-slate-500">${m.fields[3].active?m.fields[3].label:'-'}</td></tr>`).join("");
+    }
+
+    const VIEW_TITLES = {
+      "dashboard": ["Ringkasan & KPI Kapasitas Gudang", "Data operasional 7 Chamber Cold Storage & 4 Reefer SKBM"],
+      "form": ["Input Data Harian", "Pencatatan stok terpakai & suhu gudang"],
+      "db-chamber": ["Data Chamber (DB_Chamber)", "Riwayat operasional 7 gudang Chamber Cold Storage"],
+      "db-reefer": ["Data Reefer (DB_Reefer)", "Riwayat operasional 4 unit Reefer SKBM"],
+      "master": ["Master Gudang & Koneksi", "Standar kapasitas gudang dan sinkronisasi Google Sheets"]
+    };
+
+    function switchTab(id) {
+      if (currentRole !== "ADMIN" && ["db-chamber","db-reefer","master"].includes(id)) {
+        id = "dashboard";
+      }
+      ["dashboard","form","db-chamber","db-reefer","master"].forEach(t => {
+        const view = document.getElementById(`view-${t}`), nav = document.getElementById(`nav-${t}`);
+        if (t === id) { view.classList.remove("hidden"); nav.className = "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold btn-3d-primary"; }
+        else { view.classList.add("hidden"); nav.className = "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold text-slate-900 hover:bg-slate-100 transition"; }
+      });
+      document.getElementById("page-title").textContent = VIEW_TITLES[id][0];
+      document.getElementById("page-subtitle").textContent = VIEW_TITLES[id][1];
+      document.getElementById("dash-controls").classList.toggle("hidden", id !== "dashboard");
+      toggleMobileSidebar(false);
+    }
+
+    function exportAllCSV() {
+      let csv = "DB_CHAMBER\nTanggal,ColdStorage,Used Utama,AddOn 1,AddOn 2,AddOn 3,OnFloor,Suhu,Keterangan\n";
+      chamberLogs.forEach(r => { csv += `${r.date},${r.code},${r.u1},${r.u2},${r.u3},${r.u4},${r.fl},${r.temp??""},"${r.note||""}"\n`; });
+      csv += "\nDB_REEFER\nTanggal,Reefer,Used 1,Used 2,Used 3,Used 4,Suhu,Keterangan\n";
+      reeferLogs.forEach(r => { csv += `${r.date},${r.code},${r.u1},${r.u2},${r.u3},${r.u4},${r.temp??""},"${r.note||""}"\n`; });
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" })); a.download = "HijrahFood_WMS_Data.csv"; a.click();
+    }
+
+    function renderAll() { renderDashboard(); renderChamberDB(); renderReeferDB(); renderMasterTable(); }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      initData();
+      initRole();
+      const latestDate = chamberLogs.length ? chamberLogs[chamberLogs.length - 1].date : "2026-10-21";
+      document.getElementById("input-date").value = latestDate;
+      onWarehouseChange();
+      renderAll();
+      if (getGasUrl()) syncFromGoogleSheet(false);
+
+      // Auto-sync otomatis ke Google Sheets setiap 15 detik & saat tab kembali aktif
+      setInterval(() => {
+        if (getGasUrl() && document.visibilityState === "visible") syncFromGoogleSheet(false);
+      }, 15000);
+      document.addEventListener("visibilitychange", () => {
+        if (getGasUrl() && document.visibilityState === "visible") syncFromGoogleSheet(false);
+      });
+    });
+  </script>
+</body>
+</html>
