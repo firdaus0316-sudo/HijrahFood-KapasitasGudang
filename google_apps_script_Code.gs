@@ -48,6 +48,7 @@ function doPost(e) {
 
       if (type === "CHAMBER") {
         const sh = ss.getSheetByName(SHEET_CHAMBER);
+        if (!sh) throw new Error("Tab " + SHEET_CHAMBER + " tidak ditemukan.");
         const rowValues = [
           dateObj,
           code,
@@ -64,6 +65,7 @@ function doPost(e) {
         return jsonOutput_({ ok: true, mode: res.mode, row: res.row });
       } else if (type === "REEFER") {
         const sh = ss.getSheetByName(SHEET_REEFER);
+        if (!sh) throw new Error("Tab " + SHEET_REEFER + " tidak ditemukan.");
         const rowValues = [
           dateObj,
           code,

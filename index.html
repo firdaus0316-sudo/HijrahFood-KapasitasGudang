@@ -235,6 +235,7 @@
       </header>
 
       <div class="p-4 max-w-[1400px] mx-auto space-y-3.5">
+        <div id="sync-alert-banner" class="hidden px-4 py-2.5 rounded-xl text-xs font-bold border flex flex-wrap items-center justify-between gap-2"></div>
         <div id="global-toast" class="hidden px-4 py-2.5 rounded-md text-xs font-medium border"></div>
 
         <!-- ======================================================== -->
@@ -1164,11 +1165,49 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
     let isSubmittingForm = false;
     let isFlushingQueue = false;
     let openedRowSignature = null;
+    let lastSyncError = "";
+
+    async function parseGasJson_(res) {
+      const txt = await res.text();
+      try {
+        return JSON.parse(txt);
+      } catch (e) {
+        if (txt && txt.includes("<html")) {
+          throw new Error("Apps Script mengembalikan HTML (cek Deploy -> Who has access: Anyone & redeploy New version).");
+        }
+        throw new Error("Respons Apps Script tidak valid.");
+      }
+    }
+
+    function updateSyncAlertBanner() {
+      const banner = document.getElementById("sync-alert-banner");
+      if (!banner) return;
+      const url = getGasUrl();
+      const q = getPendingQueue();
+      if (!url) {
+        banner.className = "px-4 py-2.5 rounded-xl text-xs font-bold border bg-amber-50 text-amber-900 border-amber-300 flex flex-wrap items-center justify-between gap-2";
+        const adminBtn = currentRole === "ADMIN"
+          ? `<button type="button" onclick="openSettingsModal()" class="px-3 py-1 rounded-lg bg-white border border-amber-400 text-amber-900 hover:bg-amber-100">Hubungkan Koneksi Sheet</button>`
+          : `<span>Minta Admin membagikan <b>Link Mode Umum</b> yang sudah terhubung Sheet.</span>`;
+        banner.innerHTML = `<span>Perhatian: Aplikasi di browser ini belum terhubung ke Google Sheets (input hanya tersimpan lokal, belum masuk ke Sheet).</span>${adminBtn}`;
+        banner.classList.remove("hidden");
+        return;
+      }
+      if (q.length > 0) {
+        const itemsTxt = q.map(x => `${x.code} (${fmtDateID(x.date)})`).join(", ");
+        const errTxt = lastSyncError ? ` — ${lastSyncError}` : "";
+        banner.className = "px-4 py-2.5 rounded-xl text-xs font-bold border bg-red-50 text-red-800 border-red-300 flex flex-wrap items-center justify-between gap-2";
+        banner.innerHTML = `<span>Antrean belum terkirim ke Google Sheets (${q.length}): <b>${itemsTxt}</b>${errTxt}</span><button type="button" onclick="syncFromGoogleSheet(true)" class="px-3 py-1 rounded-lg bg-white border border-red-400 text-red-800 hover:bg-red-100">Kirim Ulang Sekarang</button>`;
+        banner.classList.remove("hidden");
+        return;
+      }
+      banner.classList.add("hidden");
+    }
 
     function getPendingQueue() {
       try { return JSON.parse(localStorage.getItem(PENDING_QUEUE_KEY) || "[]"); } catch (e) { return []; }
     }
-    function savePendingQueue(q) { localStorage.setItem(PENDING_QUEUE_KEY, JSON.stringify(q)); }
+    function savePendingQueue(q) { localStorage.setItem(PENDING_QUEUE_KEY, JSON.stringify(q)); updateSyncAlertBanner(); }
     function enqueuePending(item) {
       const q = getPendingQueue().filter(x => !(x.type === item.type && x.date === item.date && x.code === item.code));
       q.push(item);
@@ -1204,19 +1243,29 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       try {
         for (const item of q) {
           const res = await fetch(url, {
-            method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+            method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(Object.assign({ action: "upsert" }, item))
           });
-          const data = await res.json();
-          if (data.ok) removePending(item.type, item.date, item.code);
-          else break;
+          const data = await parseGasJson_(res);
+          if (data.ok) {
+            removePending(item.type, item.date, item.code);
+            lastSyncError = "";
+          } else {
+            lastSyncError = data.error || "Gagal menulis ke Google Sheets";
+            break;
+          }
         }
-      } catch (e) { /* tetap di antrean untuk percobaan berikutnya */ }
-      finally { isFlushingQueue = false; }
+      } catch (e) {
+        lastSyncError = e.message || "Koneksi terputus";
+      } finally {
+        isFlushingQueue = false;
+        updateSyncAlertBanner();
+      }
     }
 
     async function syncFromGoogleSheet(manual = false) {
       const url = getGasUrl();
+      updateSyncAlertBanner();
       if (!url) { if (manual) openSettingsModal(); return false; }
       if (isSyncingSheet || isSubmittingForm) return false;
       isSyncingSheet = true;
@@ -1225,8 +1274,8 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       try {
         await flushPendingQueue();
         const sep = url.includes("?") ? "&" : "?";
-        const res = await fetch(`${url}${sep}t=${Date.now()}`, { method: "GET", cache: "no-store" });
-        const data = await res.json();
+        const res = await fetch(`${url}${sep}t=${Date.now()}`, { method: "GET", redirect: "follow", cache: "no-store" });
+        const data = await parseGasJson_(res);
         if (!data.ok) throw new Error(data.error || "Gagal membaca Google Sheet");
         if (Array.isArray(data.chamberLogs)) chamberLogs = dedupLogs_(data.chamberLogs);
         if (Array.isArray(data.reeferLogs))  reeferLogs  = dedupLogs_(data.reeferLogs);
@@ -1297,7 +1346,7 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       else { st.textContent = "Gagal. Cek Deploy -> Who has access: Anyone."; st.className = "font-semibold text-red-600"; }
     }
 
-    function disconnectGasUrl() { localStorage.removeItem(GAS_URL_KEY); document.getElementById("gas-url-input").value=""; updateConnectionUI(null,false); closeSettingsModal(); }
+    function disconnectGasUrl() { localStorage.removeItem(GAS_URL_KEY); document.getElementById("gas-url-input").value=""; updateConnectionUI(null,false); updateSyncAlertBanner(); closeSettingsModal(); }
     function copyAppsScriptCode() { navigator.clipboard?.writeText(APPS_SCRIPT_SNIPPET); const st=document.getElementById("gas-test-status"); st.textContent="Kode tersalin ke clipboard!"; st.className="font-semibold text-emerald-700"; }
 
     function initData() {
@@ -2011,25 +2060,29 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
         const payload = { type: m.type, date: dateStr, code, u1, u2, u3, u4, fl, temp, note };
         try {
           const res = await fetch(gasUrl, {
-            method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+            method: "POST", redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(Object.assign({ action: "upsert" }, payload))
           });
-          const data = await res.json();
+          const data = await parseGasJson_(res);
           if (!data.ok) throw new Error(data.error || "Gagal menulis ke Google Sheets");
+          lastSyncError = "";
           removePending(m.type, dateStr, code);
           syncedOk = true;
           showToast(`Data ${code} (${fmtDateID(dateStr)}) tersimpan langsung ke Google Sheets (baris ${data.row}).`);
         } catch (err) {
+          lastSyncError = err.message || "Gagal kirim";
           enqueuePending(payload);
-          showToast("Koneksi sibuk/offline — data masuk antrean dan akan otomatis terkirim ke Google Sheets.", true);
+          showToast("Gagal kirim ke Google Sheets: " + lastSyncError + " (masuk antrean retry).", true);
         } finally {
           isSubmittingForm = false;
           btn.disabled = false;
           prefillExistingOrLatest();
+          updateSyncAlertBanner();
         }
         if (syncedOk) syncFromGoogleSheet(false);
       } else {
-        showToast(`Data ${code} (${fmtDateID(dateStr)}) disimpan secara lokal.`);
+        showToast(`PERHATIAN: ${code} hanya tersimpan lokal karena Koneksi Sheet belum terhubung!`, true);
+        updateSyncAlertBanner();
         prefillExistingOrLatest();
       }
       switchTab("dashboard");
@@ -2122,6 +2175,7 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
     window.addEventListener("DOMContentLoaded", () => {
       initData();
       initRole();
+      updateSyncAlertBanner();
       document.getElementById("input-date").value = getTodayISO();
       onWarehouseChange();
       renderAll();
