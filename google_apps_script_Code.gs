@@ -44,8 +44,7 @@ function doPost(e) {
       const code = String(payload.code || "").trim();
       if (!dateStr || !code) throw new Error("Tanggal dan Kode Gudang wajib diisi.");
 
-      const dateParts = dateStr.split("-");
-      const dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
+      const dateObj = Utilities.parseDate(dateStr, tz, "yyyy-MM-dd");
 
       if (type === "CHAMBER") {
         const sh = ss.getSheetByName(SHEET_CHAMBER);

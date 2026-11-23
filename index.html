@@ -896,8 +896,7 @@ function doPost(e) {
     if (payload.action === "upsert") {
       const dateStr = String(payload.date || "").trim();
       const code = String(payload.code || "").trim();
-      const p = dateStr.split("-");
-      const dateObj = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      const dateObj = Utilities.parseDate(dateStr, tz, "yyyy-MM-dd");
       if (payload.type === "CHAMBER") {
         const sh = ss.getSheetByName(SHEET_CHAMBER);
         const vals = [dateObj, code, numOrBlank_(payload.u1, true), numOrBlank_(payload.u2, false), numOrBlank_(payload.u3, false), numOrBlank_(payload.u4, false), numOrBlank_(payload.fl, true), payload.temp !== null && payload.temp !== "" && payload.temp !== undefined ? Number(payload.temp) : "", payload.note || ""];
@@ -1240,11 +1239,12 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
           });
         }
         saveLocal(); populateDateDropdown(); renderAll();
-        // Refresh form hanya bila form tidak sedang dibuka user agar ketikan tidak tertimpa
+        // Refresh prefill form hanya bila form tidak sedang dibuka (jangan menimpa tanggal pilihan user!)
         const formView = document.getElementById("view-form");
         if (formView && formView.classList.contains("hidden")) {
-          const allLatest = Array.from(new Set([...chamberLogs.map(r=>r.date), ...reeferLogs.map(r=>r.date)])).sort();
-          if (allLatest.length) document.getElementById("input-date").value = allLatest[allLatest.length - 1];
+          if (!document.getElementById("input-date").value) {
+            document.getElementById("input-date").value = getTodayISO();
+          }
           prefillExistingOrLatest();
         } else if (openedRowSignature) {
           // Deteksi konflik jika ada user lain baru mengubah baris yang sedang dibuka di form
@@ -1311,6 +1311,10 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
     function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ chamberLogs, reeferLogs })); }
 
     const MONTHS_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+    function getTodayISO() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
     function getMonthName(d) { return d ? (MONTHS_ID[parseInt(d.split("-")[1], 10) - 1] || "-") : "-"; }
     function fmtDateID(d) { if (!d) return "-"; const [y, m, day] = d.split("-"); return `${day}/${m}/${y}`; }
     function fmtNum(n) { return Number(n || 0).toLocaleString("en-US"); }
@@ -2093,6 +2097,10 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
         if (t === id) { view.classList.remove("hidden"); nav.className = "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold btn-3d-primary"; }
         else { view.classList.add("hidden"); nav.className = "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold text-slate-900 hover:bg-amber-50/60 transition"; }
       });
+      if (id === "form") {
+        document.getElementById("input-date").value = getTodayISO();
+        prefillExistingOrLatest();
+      }
       document.getElementById("page-title").textContent = VIEW_TITLES[id][0];
       document.getElementById("page-subtitle").textContent = VIEW_TITLES[id][1];
       document.getElementById("dash-controls").classList.toggle("hidden", id !== "dashboard");
@@ -2112,8 +2120,7 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
     window.addEventListener("DOMContentLoaded", () => {
       initData();
       initRole();
-      const latestDate = chamberLogs.length ? chamberLogs[chamberLogs.length - 1].date : "2026-10-21";
-      document.getElementById("input-date").value = latestDate;
+      document.getElementById("input-date").value = getTodayISO();
       onWarehouseChange();
       renderAll();
       if (getGasUrl()) syncFromGoogleSheet(false);
