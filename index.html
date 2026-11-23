@@ -1133,6 +1133,23 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
 
     function getGasUrl() { return localStorage.getItem(GAS_URL_KEY) || ""; }
 
+    async function loadServerGasConfig() {
+      if (getGasUrl()) return getGasUrl();
+      if (!window.location.protocol.startsWith("http")) return "";
+      try {
+        const res = await fetch("/api/config", { cache: "no-store" });
+        if (!res.ok) return "";
+        const cfg = await res.json();
+        if (cfg && cfg.gasUrl && cfg.gasUrl.startsWith("https://")) {
+          if (!localStorage.getItem(ROLE_KEY)) localStorage.setItem(ROLE_KEY, currentRole);
+          localStorage.setItem(GAS_URL_KEY, cfg.gasUrl);
+          updateSyncAlertBanner();
+          return cfg.gasUrl;
+        }
+      } catch (e) {}
+      return "";
+    }
+
     function updateConnectionUI(label, isConnected) {
       const lbl = document.getElementById("conn-status-label");
       const dot = document.getElementById("sidebar-conn-dot");
@@ -1264,9 +1281,16 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
     }
 
     async function syncFromGoogleSheet(manual = false) {
-      const url = getGasUrl();
+      let url = getGasUrl();
+      if (!url) url = await loadServerGasConfig();
       updateSyncAlertBanner();
-      if (!url) { if (manual) openSettingsModal(); return false; }
+      if (!url) {
+        if (manual) {
+          if (currentRole === "ADMIN") openSettingsModal();
+          else showToast("Koneksi Google Sheets belum aktif. Minta Admin mengatur GAS_URL atau bagikan Link Mode Umum.", true);
+        }
+        return false;
+      }
       if (isSyncingSheet || isSubmittingForm) return false;
       isSyncingSheet = true;
       const btn = document.getElementById("btn-sync-now");
@@ -2051,7 +2075,8 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       if (m.type==="CHAMBER") chamberLogs = dedupLogs_(chamberLogs); else reeferLogs = dedupLogs_(reeferLogs);
       saveLocal(); populateDateDropdown(); renderAll();
 
-      const gasUrl = getGasUrl();
+      let gasUrl = getGasUrl();
+      if (!gasUrl) gasUrl = await loadServerGasConfig();
       if (gasUrl) {
         const btn = document.getElementById("btn-form-submit");
         btn.textContent = "Menyimpan..."; btn.disabled = true;
@@ -2179,7 +2204,11 @@ function jsonOutput_(obj) { return ContentService.createTextOutput(JSON.stringif
       document.getElementById("input-date").value = getTodayISO();
       onWarehouseChange();
       renderAll();
-      if (getGasUrl()) syncFromGoogleSheet(false);
+      (async () => {
+        if (!getGasUrl()) await loadServerGasConfig();
+        updateSyncAlertBanner();
+        if (getGasUrl()) syncFromGoogleSheet(false);
+      })();
 
       // Auto-sync otomatis ke Google Sheets setiap 10 detik, saat tab aktif, fokus, atau kembali online
       setInterval(() => {
