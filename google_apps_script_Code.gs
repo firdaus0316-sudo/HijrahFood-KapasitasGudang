@@ -101,12 +101,14 @@ function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
       if (d === dateStr && c === code) {
         const targetRow = i + 2;
         sh.getRange(targetRow, startCol, 1, numCols).setValues([rowValues]);
+        sh.getRange(targetRow, 2).setNumberFormat("dd/MM/yyyy");
         return { mode: "updated", row: targetRow };
       }
     }
   }
   const newRow = Math.max(2, lastDataRow + 1);
   sh.getRange(newRow, startCol, 1, numCols).setValues([rowValues]);
+  sh.getRange(newRow, 2).setNumberFormat("dd/MM/yyyy");
   return { mode: "inserted", row: newRow };
 }
 

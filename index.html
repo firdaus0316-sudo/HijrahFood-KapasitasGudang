@@ -926,12 +926,14 @@ function upsertRow_(sh, tz, dateStr, code, startCol, numCols, rowValues) {
       if (d && c) lastDataRow = i + 2;
       if (d === dateStr && c === code) {
         sh.getRange(i + 2, startCol, 1, numCols).setValues([rowValues]);
+        sh.getRange(i + 2, 2).setNumberFormat("dd/MM/yyyy");
         return { mode: "updated", row: i + 2 };
       }
     }
   }
   const newRow = Math.max(2, lastDataRow + 1);
   sh.getRange(newRow, startCol, 1, numCols).setValues([rowValues]);
+  sh.getRange(newRow, 2).setNumberFormat("dd/MM/yyyy");
   return { mode: "inserted", row: newRow };
 }
 
